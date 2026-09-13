@@ -270,10 +270,10 @@ app.whenReady().then(() => {
     }
     throw new Error('updates op not allowed: ' + op);
   });
-  // ── Hermes gateway discovery: `hermes serve` binds :0 (random port).
-  // The page can't read /proc, main can: scan our own TCP listeners for
-  // hermes-owned ports and hand them back for probing.
-  ipcMain.handle('hermes-ports', async () => {
+  // ── Hermes gateway: find it, or start it ourselves ──
+  // `hermes serve` binds :0 (random port). The page can't read /proc,
+  // main can: match LISTEN sockets to hermes-owned pids via inode.
+  function hermesPortsSync() {
     const ports = new Set();
     try {
       const tcp = fs.readFileSync('/proc/net/tcp', 'utf8').split('\n').slice(1);
@@ -290,7 +290,10 @@ app.whenReady().then(() => {
         try { exe = fs.readlinkSync(`/proc/${pid}/exe`); } catch {}
         let cmd = '';
         try { cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replace(/\0/g, ' '); } catch {}
-        if (!/hermes/i.test(exe) && !/hermes/i.test(cmd)) continue;
+        // match the serve process itself, not anything under a .hermes path
+        // (that false-positives Electron, whose dist lives under .hermes/)
+        const exeBase = exe.split('/').pop();
+        if (!(exeBase === 'hermes' || /hermes_cli/.test(cmd) || /hermes serve/.test(cmd))) continue;
         let fds = [];
         try { fds = fs.readdirSync(`/proc/${pid}/fd`); } catch { continue; }
         for (const fd of fds) {
@@ -306,8 +309,39 @@ app.whenReady().then(() => {
         if (byInode.has(inode)) ports.add(parseInt(port, 10));
       }
     } catch (e) { console.error('[jarvis-ports]', e.message); }
-    return { ports: [...ports].sort((a, b) => a - b) };
+    return [...ports].sort((a, b) => a - b);
+  }
+  ipcMain.handle('hermes-ports', async () => ({ ports: hermesPortsSync() }));
+
+  // Start our own gateway when none is running. Detached `hermes serve`
+  // on :0, then poll the scan until its port appears (or time out).
+  // Killed on app quit only if WE started it.
+  let ownGateway = null;
+  ipcMain.handle('hermes-ensure', async () => {
+    if (hermesPortsSync().length) return { started: false, ports: hermesPortsSync() };
+    const bin = path.join(os.homedir(), '.local', 'bin', 'hermes');
+    if (!fs.existsSync(bin)) {
+      return { started: false, ports: [], error: 'no hermes CLI — install Hermes for the live backend (mock works offline)' };
+    }
+    try {
+      ownGateway = spawn(bin, ['serve', '--skip-build'], {
+        detached: true, stdio: 'ignore',
+      });
+      ownGateway.unref();
+      ownGateway.on('error', () => { ownGateway = null; });
+    } catch (e) {
+      return { started: false, ports: [], error: 'could not start hermes: ' + e.message };
+    }
+    const t0 = Date.now();
+    while (Date.now() - t0 < 45000) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const ports = hermesPortsSync();
+      if (ports.length) return { started: true, ports };
+      if (!ownGateway) break;
+    }
+    return { started: false, ports: [], error: 'hermes serve did not come up in 45s' };
   });
+  app.on('before-quit', () => { try { if (ownGateway) process.kill(-ownGateway.pid); } catch {} });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });

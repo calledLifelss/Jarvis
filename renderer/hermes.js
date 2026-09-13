@@ -35,7 +35,7 @@
     finally { clearTimeout(t); }
   }
 
-  // Find the gateway: saved host, then `hermes serve` listeners owned by us.
+  // Find the gateway: saved host, live local serve, or start our own.
   // Exposed for the Reconnect button / diagnostics.
   async function discover() {
     try {
@@ -49,6 +49,16 @@
         const hp = '127.0.0.1:' + p;
         if (await probe(hp)) { resolvedHost = hp; return hp; }
       }
+    } catch {}
+    // nothing answering — ask main to start `hermes serve` for us
+    try {
+      const ens = await window.jarvis.hermesEnsure();
+      if (ens && ens.error && !ens.ports.length) return { error: ens.error };
+      for (const p of (ens && ens.ports) || []) {
+        const hp = '127.0.0.1:' + p;
+        if (await probe(hp)) { resolvedHost = hp; return hp; }
+      }
+      if (ens && ens.error) return { error: ens.error };
     } catch {}
     if (await probe(DEFAULT_HOST)) { resolvedHost = DEFAULT_HOST; return DEFAULT_HOST; }
     return null;
@@ -103,11 +113,12 @@
 
   async function connect() {
     disconnect();
-    // no saved host that answers? find the gateway before failing
-    try {
-      const saved = localStorage.getItem('jarvis-hermes-host');
-      if (!saved) await discover();
-    } catch {}
+    // no saved host that answers? find the gateway (or start it) first
+    const saved = (() => { try { return localStorage.getItem('jarvis-hermes-host'); } catch { return null; } })();
+    if (!saved) {
+      const found = await discover();
+      if (found && found.error) throw new Error(found.error);
+    }
     st.token = await fetchToken();
     await new Promise((resolve, reject) => {
       const ws = new WebSocket(wsBase() + '/api/ws?token=' + encodeURIComponent(st.token));

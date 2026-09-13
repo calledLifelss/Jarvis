@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('jarvis', {
   providers: (op, args) => ipcRenderer.invoke('providers-call', op, args || {}),
   cli: (op, args) => ipcRenderer.invoke('hermes-cli', op, args || {}),
   hermesPorts: () => ipcRenderer.invoke('hermes-ports'),
+  hermesEnsure: () => ipcRenderer.invoke('hermes-ensure'),
   updates: (op, args) => ipcRenderer.invoke('jarvis-updates', op, args || {}),
 });
