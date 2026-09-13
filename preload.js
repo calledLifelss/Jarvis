@@ -11,4 +11,7 @@ contextBridge.exposeInMainWorld('jarvis', {
   hermesPorts: () => ipcRenderer.invoke('hermes-ports'),
   hermesEnsure: () => ipcRenderer.invoke('hermes-ensure'),
   updates: (op, args) => ipcRenderer.invoke('jarvis-updates', op, args || {}),
+  onUpdateProgress: (fn) => {
+    ipcRenderer.on('jarvis-update-progress', (_e, pct) => { try { fn(pct); } catch {} });
+  },
 });

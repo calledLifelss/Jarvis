@@ -253,13 +253,16 @@ app.whenReady().then(() => {
     if (op === 'check') {
       const rel = await updater.check(app.getVersion());
       if (!rel.configured) return rel;
-      const pick = updater.pickAsset(rel.assets || [], rel.latest);
+      const pick = updater.pickAsset(rel.assets || [], rel.latest, app.getVersion());
       updCache = { rel, pick };
-      return { ...rel, pick: pick ? { name: pick.name, size: pick.size, isPatch: !!pick.isPatch } : null };
+      return { ...rel, pick: pick ? { name: pick.name, size: pick.size, isPatch: !!pick.isPatch, expectedSha256: pick.expectedSha256 || null } : null };
     }
     if (op === 'download') {
       if (!updCache || !updCache.pick) throw new Error('check first — no update picked');
-      const file = await updater.download(updCache.pick);
+      const win = BrowserWindow.getAllWindows()[0];
+      const file = await updater.download(updCache.pick, (pct) => {
+        try { if (win && !win.isDestroyed()) win.webContents.send('jarvis-update-progress', pct); } catch {}
+      });
       return { file, isPatch: !!updCache.pick.isPatch };
     }
     if (op === 'install') {
@@ -317,8 +320,11 @@ app.whenReady().then(() => {
   // on :0, then poll the scan until its port appears (or time out).
   // Killed on app quit only if WE started it.
   let ownGateway = null;
+  let ensuring = null; // in-flight ensure (concurrent clicks share it)
   ipcMain.handle('hermes-ensure', async () => {
     if (hermesPortsSync().length) return { started: false, ports: hermesPortsSync() };
+    if (ensuring) return ensuring;
+    ensuring = (async () => {
     const bin = path.join(os.homedir(), '.local', 'bin', 'hermes');
     if (!fs.existsSync(bin)) {
       return { started: false, ports: [], error: 'no hermes CLI — install Hermes for the live backend (mock works offline)' };
@@ -340,8 +346,16 @@ app.whenReady().then(() => {
       if (!ownGateway) break;
     }
     return { started: false, ports: [], error: 'hermes serve did not come up in 45s' };
+    })();
+    try { return await ensuring; }
+    finally { ensuring = null; }
   });
-  app.on('before-quit', () => { try { if (ownGateway) process.kill(-ownGateway.pid); } catch {} });
+  // only kill what we started, and never mid-startup (the poll above holds
+  // `ensuring` — quitting mid-ensure leaves the gateway running, harmless)
+  app.on('before-quit', () => {
+    if (ensuring) return;
+    try { if (ownGateway) process.kill(-ownGateway.pid); } catch {}
+  });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });

@@ -1,6 +1,6 @@
 {
   "name": "jarvis-chatroom",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Desktop chatroom for AI agent backends",
   "author": {
     "name": "Lifeless",
@@ -15,7 +15,8 @@
     "dist:linux": "electron-builder --linux AppImage rpm deb pacman --x64 --publish never",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never",
     "release": "node release/build-all.js",
-    "release:winzip": "node release/make-winzip.js"
+    "release:winzip": "node release/make-winzip.js",
+    "release:patch": "node release/build-patch-only.js"
   },
   "dependencies": {
     "ws": "^8.21.3"

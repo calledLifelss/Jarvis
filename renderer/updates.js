@@ -48,6 +48,11 @@
       }
       pendingAsset = r.pick || null;
       downloadedFile = null;
+      if (!pendingAsset) {
+        if (pill) pill.textContent = 'no installer';
+        if (note) note.textContent = 'v' + r.latest + ' has no installer for your platform yet.';
+        return;
+      }
       if (pill) pill.textContent = 'update ready';
       if (btn) {
         btn.disabled = false;
@@ -65,6 +70,9 @@
 
   async function onInstall() {
     const btn = $('upd-install');
+    try { if (window.jarvis.onUpdateProgress) window.jarvis.onUpdateProgress((pct) => {
+      if (btn) btn.textContent = `⬇ Downloading… ${pct}%`;
+    }); } catch {}
     if (btn) { btn.disabled = true; btn.textContent = '⬇ Downloading…'; }
     toast('Downloading update… (large file, up to a few minutes)', '');
     try {

@@ -7,6 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 let CHANNEL = null;
@@ -23,25 +24,42 @@ function cmpVer(a, b) {
   return 0;
 }
 
-function getJson(url, headers = {}) {
+function getJson(url, headers = {}, tries = 3) {
   return new Promise((resolve, reject) => {
-    const lib = url.startsWith('https:') ? https : http;
-    const req = lib.get(url, {
-      headers: { 'user-agent': 'jarvis-updater', accept: 'application/vnd.github+json', ...headers },
-    }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        getJson(res.headers.location, headers).then(resolve, reject);
-        return;
-      }
-      if (res.statusCode !== 200) { reject(new Error('HTTP ' + res.statusCode)); return; }
-      let d = '';
-      res.on('data', (c) => { d += c; });
-      res.on('end', () => {
-        try { resolve(JSON.parse(d)); } catch (e) { reject(new Error('bad release json')); }
+    const attempt = (n) => {
+      const lib = url.startsWith('https:') ? https : http;
+      const req = lib.get(url, {
+        headers: { 'user-agent': 'jarvis-updater', accept: 'application/vnd.github+json', ...headers },
+      }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          getJson(res.headers.location, headers, tries).then(resolve, reject);
+          return;
+        }
+        if (res.statusCode === 403 && n < tries) {
+          // rate-limit / filtered network — wait and retry
+          res.resume();
+          setTimeout(() => attempt(n + 1), 3000 * n);
+          return;
+        }
+        if (res.statusCode !== 200) {
+          res.resume();
+          if (n < tries) setTimeout(() => attempt(n + 1), 2000 * n);
+          else reject(new Error('HTTP ' + res.statusCode + ' from update server (check internet/VPN, then retry)'));
+          return;
+        }
+        let d = '';
+        res.on('data', (c) => { d += c; });
+        res.on('end', () => {
+          try { resolve(JSON.parse(d)); } catch (e) { reject(new Error('bad release json')); }
+        });
       });
-    });
-    req.on('error', reject);
-    req.setTimeout(25000, () => { req.destroy(); reject(new Error('update check timed out')); });
+      req.on('error', () => {
+        if (n < tries) setTimeout(() => attempt(n + 1), 2000 * n);
+        else reject(new Error('update check failed after 3 tries (check internet/VPN, then retry)'));
+      });
+      req.setTimeout(30000, () => { req.destroy(new Error('timeout')); });
+    };
+    attempt(1);
   });
 }
 
@@ -50,64 +68,154 @@ async function check(currentVersion) {
   const api = `https://api.github.com/repos/${CHANNEL.repo}/releases/latest`;
   const rel = await getJson(api);
   const latest = String(rel.tag_name || rel.name || '').replace(/^v/, '');
+  const assets = (rel.assets || []).map((a) => ({ name: a.name, size: a.size, url: a.browser_download_url }));
+  // pull the checksums file so downloads + patches verify (best effort)
+  try {
+    const sums = assets.find((a) => /^sha256sums/i.test(a.name));
+    if (sums) {
+      const txt = await new Promise((resolve, reject) => {
+        https.get(sums.url, { headers: { 'user-agent': 'jarvis-updater' } }, (res) => {
+          if (res.statusCode !== 200) { reject(new Error('sums HTTP ' + res.statusCode)); return; }
+          let d = '';
+          res.on('data', (c) => { d += c; });
+          res.on('end', () => resolve(d));
+        }).on('error', reject);
+      });
+      const table = {};
+      for (const line of txt.split('\n')) {
+        const m = line.match(/^([0-9a-f]{64})\s+(\S+)/i);
+        if (m) table[m[2]] = m[1].toLowerCase();
+      }
+      for (const a of assets) {
+        if (table[a.name]) a.expectedSha256 = table[a.name];
+      }
+    }
+  } catch {}
   return {
     configured: true,
     current: currentVersion,
     latest,
     hasUpdate: cmpVer(latest, currentVersion) > 0,
     notes: String(rel.body || '').slice(0, 2000),
-    assets: (rel.assets || []).map((a) => ({ name: a.name, size: a.size, url: a.browser_download_url })),
+    assets,
     page: rel.html_url,
   };
 }
 
-function pickAsset(assets, latestVersion) {
-  // Patches first: `Jarvis-<latest>-patch.zip` (~2MB) replaces just
-  // app.asar. No patch for this target? Fall through to full installers.
+function pickAsset(assets, latestVersion, currentVersion) {
+  // Patches first: `Jarvis-<from>-to-<to>-patch.zip` (~2MB) replaces just
+  // app.asar (whole-file swap, so any older install can jump straight to
+  // latest). Match order: exact from-version patch, then a target-only
+  // patch (`Jarvis-<to>-patch.zip`, universal), then full installers.
   const names = assets.map((a) => a.name.toLowerCase());
   const find = (...needles) => assets[names.findIndex((n) => needles.every((w) => n.includes(w)))];
-  const v = String(latestVersion || '').replace(/^v/, '').toLowerCase();
-  const patch = v && find('-patch.zip', v);
-  if (patch) return { ...patch, isPatch: true };
+  const cur = String(currentVersion || '').replace(/^v/, '').toLowerCase();
+  const lat = String(latestVersion || '').replace(/^v/, '').toLowerCase();
+  // version-boundary match: "1.0.1" must not match inside "1.0.12"
+  const hasVer = (n, v) => v && new RegExp(`(^|[^0-9.])${v.replace(/\./g, '\\.')}([^0-9.]|$)`).test(n);
+  const patchIdx = names.findIndex((n) =>
+    n.includes('-patch.zip') && hasVer(n, lat) && (hasVer(n, cur) || n.includes('any')));
+  if (cur && lat && patchIdx >= 0) return { ...assets[patchIdx], isPatch: true };
+  if (lat) {
+    const uni = names.findIndex((n) =>
+      n.includes('-patch.zip') && hasVer(n, lat) && !/-to-/.test(n));
+    if (uni >= 0 && cmpVer(lat, cur) > 0) return { ...assets[uni], isPatch: true };
+  }
   const plat = process.platform;
-  if (plat === 'win32') return find('.exe') || find('.zip');
-  if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip');
+  if (plat === 'win32') return find('.exe') || find('.zip') || null;
+  if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip') || null;
   // linux: match the distro's native package, AppImage as fallback
   try {
     const osrel = fs.readFileSync('/etc/os-release', 'utf8');
-    if (/ID_LIKE=.*(debian|ubuntu)|ID=(debian|ubuntu|linuxmint|pop)/.test(osrel)) return find('.deb') || find('.appimage');
-    if (/ID_LIKE=.*(arch)|ID=(arch|cachyos|endeavouros|manjaro)/.test(osrel)) return find('.pkg.tar.') || find('.appimage');
-    if (/ID_LIKE=.*(rhel|fedora|suse)|ID=(fedora|rhel|opensuse)/.test(osrel)) return find('.rpm') || find('.appimage');
+    if (/ID_LIKE=.*(debian|ubuntu)|ID=(debian|ubuntu|linuxmint|pop)/.test(osrel)) return find('.deb') || find('.appimage') || null;
+    if (/ID_LIKE=.*(arch)|ID=(arch|cachyos|endeavouros|manjaro)/.test(osrel)) return find('.pkg.tar.') || find('.appimage') || null;
+    if (/ID_LIKE=.*(rhel|fedora|suse)|ID=(fedora|rhel|opensuse)/.test(osrel)) return find('.rpm') || find('.appimage') || null;
   } catch {}
-  return find('.appimage') || find('.deb') || find('.rpm');
+  return find('.appimage') || find('.deb') || find('.rpm') || null;
 }
 
 function download(asset, onProgress) {
+  // Resumable: keeps a .part file, sends Range on retry. Retries 3x, then
+  // verifies sha256 when the release provides a checksums asset.
   return new Promise((resolve, reject) => {
     const dest = path.join(os.tmpdir(), asset.name);
-    const file = fs.createWriteStream(dest);
-    const lib = asset.url.startsWith('https:') ? https : http;
-    const req = lib.get(asset.url, { headers: { 'user-agent': 'jarvis-updater' } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        // release assets live behind signed-URL redirects
-        download({ ...asset, url: res.headers.location }, onProgress).then(resolve, reject);
-        res.resume();
-        return;
-      }
-      if (res.statusCode !== 200) { reject(new Error('download HTTP ' + res.statusCode)); return; }
-      const total = parseInt(res.headers['content-length'] || '0', 10);
-      let got = 0;
-      res.on('data', (c) => {
-        got += c.length;
-        if (total && onProgress) {
-          try { onProgress(Math.round((got / total) * 100)); } catch {}
+    const part = dest + '.part';
+    let start = 0;
+    try { start = fs.existsSync(part) ? fs.statSync(part).size : 0; } catch {}
+    let attempts = 0;
+    const attempt = (offset) => {
+      attempts++;
+      const headers = { 'user-agent': 'jarvis-updater' };
+      if (offset > 0) headers.Range = `bytes=${offset}-`;
+      const file = fs.createWriteStream(part, { flags: offset > 0 ? 'a' : 'w' });
+      const killed = { done: false };
+      const fail = (msg, retryOffset) => {
+        if (killed.done) return;
+        killed.done = true;
+        try { file.close(); } catch {}
+        if (attempts < 3) setTimeout(() => attempt(retryOffset), 2000 * attempts);
+        else reject(new Error(msg));
+      };
+      const lib = asset.url.startsWith('https:') ? https : http;
+      const req = lib.get(asset.url, { headers }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          try { file.close(); } catch {}
+          killed.done = true; // this attempt is over; the redirect continues it
+          asset = { ...asset, url: res.headers.location };
+          attempt(offset); // redirect keeps the offset via Range
+          return;
         }
+        if (offset > 0 && res.statusCode === 200) {
+          // server ignored Range — full body would corrupt the .part append.
+          // restart clean instead of appending.
+          res.resume();
+          try { file.close(); } catch {}
+          killed.done = true;
+          attempt(0);
+          return;
+        }
+        if (res.statusCode === 416) {
+          // server can't resume (or part is complete) — verify what we have
+          file.close(() => finish(part));
+          return;
+        }
+        if (res.statusCode !== 200 && res.statusCode !== 206) {
+          file.close(() => { if (attempts < 3) attempt(0); else reject(new Error('download HTTP ' + res.statusCode)); });
+          return;
+        }
+        const total = parseInt(res.headers['content-length'] || '0', 10) + offset;
+        let got = offset;
+        res.on('data', (c) => {
+          got += c.length;
+          if (total && onProgress) {
+            try { onProgress(Math.round((got / total) * 100)); } catch {}
+          }
+        });
+        res.pipe(file);
+        file.on('finish', () => file.close(() => finish(part)));
       });
-      res.pipe(file);
-      file.on('finish', () => file.close(() => resolve(dest)));
-    });
-    req.on('error', (e) => { try { fs.unlinkSync(dest); } catch {} reject(e); });
-    req.setTimeout(600000, () => { req.destroy(); reject(new Error('download timed out')); });
+      req.on('error', (e) => {
+        fail('download failed after 3 attempts (' + (e.message || 'network') + ')', startSize());
+      });
+      req.setTimeout(600000, () => { try { req.destroy(); } catch {} fail('download stalled for 10 minutes', startSize()); });
+    };
+    const startSize = () => { try { return fs.existsSync(part) ? fs.statSync(part).size : 0; } catch { return 0; } };
+    const finish = (f) => {
+      // promote .part -> dest, clean up, verify when possible
+      try { fs.renameSync(f, dest); } catch {}
+      const need = asset.expectedSha256;
+      if (need) {
+        const got = shaFile(dest);
+        if (got !== need) {
+          try { fs.unlinkSync(dest); } catch {}
+          reject(new Error('download hash mismatch — redownload'));
+          return;
+        }
+      }
+      resolve(dest);
+    };
+    attempt(start);
   });
 }
 
@@ -216,8 +324,23 @@ function findInstalledAsar() {
     '/opt/Jarvis/resources/app.asar',
     '/usr/lib/jarvis-chatroom/resources/app.asar',
   ];
-  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
-    cands.push(path.join(process.env.LOCALAPPDATA, 'Jarvis', 'resources', 'app.asar'));
+  if (process.platform === 'win32') {
+    // portable exe: asar sits next to the running exe
+    try {
+      const electron = require('electron');
+      const app = electron.app || (electron.remote && electron.remote.app);
+      if (app && app.getAppPath) {
+        const p = app.getAppPath();
+        const dir = p.endsWith('.asar') ? path.dirname(path.dirname(p)) : p;
+        cands.push(path.join(dir, 'resources', 'app.asar'));
+      }
+    } catch {}
+    if (process.env.LOCALAPPDATA) {
+      cands.push(path.join(process.env.LOCALAPPDATA, 'Jarvis', 'resources', 'app.asar'));
+    }
+    if (process.env.PORTABLE_EXECUTABLE_DIR) {
+      cands.push(path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'resources', 'app.asar'));
+    }
   }
   for (const c of cands) { try { if (fs.existsSync(c)) return c; } catch {} }
   return null;

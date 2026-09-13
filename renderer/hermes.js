@@ -8,6 +8,18 @@
   // doesn't exist, so we scan our own listeners), then the :9119 default.
   const DEFAULT_HOST = '127.0.0.1:9119';
   let resolvedHost = null;
+  const st = {
+    ws: null, connected: false, sessionId: null, storedSessionId: null,
+    model: null, provider: null, token: null,
+    onEvent: null, // legacy single handler (kept for compat)
+    _subs: new Set(), // extra event subscribers: fn(type, data)
+    _nid: 0, _pending: new Map(),
+  };
+  function disconnect() {
+    try { if (st.ws) st.ws.close(); } catch {}
+    st.ws = null;
+    st.connected = false;
+  }
   function getHost() {
     try { return localStorage.getItem('jarvis-hermes-host') || resolvedHost || DEFAULT_HOST; }
     catch { return resolvedHost || DEFAULT_HOST; }
@@ -16,6 +28,11 @@
     const clean = String(h || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     if (!clean) throw new Error('empty host');
     try { localStorage.setItem('jarvis-hermes-host', clean); } catch {}
+    resolvedHost = null;
+    st.sessionId = null; // old session belongs to the old host — force fresh
+    st.storedSessionId = null;
+    st.model = null;
+    st.provider = null;
     disconnect();
     return clean;
   }
@@ -36,6 +53,8 @@
   }
 
   // Find the gateway: saved host, live local serve, or start our own.
+  // On Windows there is no /proc scan — hermesPorts() resolves empty and
+  // we go straight to probing the default, then ensure (which spawns it).
   // Exposed for the Reconnect button / diagnostics.
   async function discover() {
     try {
@@ -63,14 +82,6 @@
     if (await probe(DEFAULT_HOST)) { resolvedHost = DEFAULT_HOST; return DEFAULT_HOST; }
     return null;
   }
-
-  const st = {
-    ws: null, connected: false, sessionId: null, storedSessionId: null,
-    model: null, provider: null, token: null,
-    onEvent: null, // legacy single handler (kept for compat)
-    _subs: new Set(), // extra event subscribers: fn(type, data)
-    _nid: 0, _pending: new Map(),
-  };
 
   function onHermesEvent(fn) {
     st._subs.add(fn);
@@ -113,13 +124,24 @@
 
   async function connect() {
     disconnect();
-    // no saved host that answers? find the gateway (or start it) first
+    // no saved host that answers? find the gateway (or start it) first.
+    // saved-but-dead host falls through too — the probe below catches it.
+    let foundErr = null;
     const saved = (() => { try { return localStorage.getItem('jarvis-hermes-host'); } catch { return null; } })();
-    if (!saved) {
+    if (!saved || !(await probe(saved))) {
       const found = await discover();
-      if (found && found.error) throw new Error(found.error);
+      if (found && found.error) foundErr = found.error;
+      else if (typeof found === 'string') {
+        try { localStorage.setItem('jarvis-hermes-host', found); } catch {}
+      }
     }
-    st.token = await fetchToken();
+    try {
+      st.token = await fetchToken();
+    } catch (e) {
+      // gateway answered discovery but died before WS — surface why
+      if (foundErr) throw new Error(foundErr);
+      throw e;
+    }
     await new Promise((resolve, reject) => {
       const ws = new WebSocket(wsBase() + '/api/ws?token=' + encodeURIComponent(st.token));
       const timer = setTimeout(() => { try { ws.close(); } catch {} reject(new Error('WS connect timeout')); }, 8000);
@@ -140,12 +162,6 @@
     });
     emit('conn', { connected: true });
     return true;
-  }
-
-  function disconnect() {
-    try { if (st.ws) st.ws.close(); } catch {}
-    st.ws = null;
-    st.connected = false;
   }
 
   function routeEvent(ev) {
@@ -188,6 +204,20 @@
   // Submit text; streams via onEvent('message.delta'...). Resolves with full text on complete.
   // opts.stopToken = {stopped:false} — polled to abort locally after session.interrupt.
   async function chat(text, { onDelta, stopToken } = {}) {
+    // gateway restarts drop sessions — one retry with a fresh session
+    try {
+      return await chatOnce(text, { onDelta, stopToken });
+    } catch (e) {
+      if (/session not found|unknown session|no such session/i.test(e.message || '')) {
+        st.sessionId = null;
+        st.storedSessionId = null;
+        return await chatOnce(text, { onDelta, stopToken });
+      }
+      throw e;
+    }
+  }
+
+  async function chatOnce(text, { onDelta, stopToken } = {}) {
     const sid = await ensureSession();
     return new Promise((resolve, reject) => {
       let full = '';

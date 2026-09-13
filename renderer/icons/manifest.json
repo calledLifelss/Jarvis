@@ -1,0 +1,660 @@
+{
+  "house": {
+    "set": "lucide",
+    "slots": {
+      "backend": {
+        "set": "lucide",
+        "name": "cpu"
+      },
+      "sessions": {
+        "set": "lucide",
+        "name": "messages-square"
+      },
+      "cron": {
+        "set": "lucide",
+        "name": "clock"
+      },
+      "sound": {
+        "set": "lucide",
+        "name": "volume-2"
+      },
+      "dock": {
+        "set": "lucide",
+        "name": "crosshair"
+      },
+      "settings": {
+        "set": "lucide",
+        "name": "settings"
+      },
+      "clip": {
+        "set": "lucide",
+        "name": "paperclip"
+      },
+      "mic": {
+        "set": "lucide",
+        "name": "mic"
+      },
+      "send": {
+        "set": "lucide",
+        "name": "send-horizontal"
+      }
+    }
+  },
+  "packs": {
+    "jarvis-blue": {
+      "set": "tabler",
+      "slots": {
+        "backend": {
+          "set": "tabler",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "tabler",
+          "name": "messages"
+        },
+        "cron": {
+          "set": "tabler",
+          "name": "alarm"
+        },
+        "sound": {
+          "set": "tabler",
+          "name": "volume"
+        },
+        "dock": {
+          "set": "tabler",
+          "name": "crosshair"
+        },
+        "settings": {
+          "set": "tabler",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "tabler",
+          "name": "paperclip"
+        },
+        "mic": {
+          "set": "tabler",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "tabler",
+          "name": "send"
+        }
+      }
+    },
+    "midnight": {
+      "set": "ph",
+      "slots": {
+        "backend": {
+          "set": "ph",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "ph",
+          "name": "chats"
+        },
+        "cron": {
+          "set": "ph",
+          "name": "timer"
+        },
+        "sound": {
+          "set": "ph",
+          "name": "speaker-high"
+        },
+        "dock": {
+          "set": "ph",
+          "name": "crosshair"
+        },
+        "settings": {
+          "set": "ph",
+          "name": "gear"
+        },
+        "clip": {
+          "set": "ph",
+          "name": "paperclip"
+        },
+        "mic": {
+          "set": "ph",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "ph",
+          "name": "paper-plane-tilt"
+        }
+      }
+    },
+    "crimson": {
+      "set": "heroicons",
+      "slots": {
+        "backend": {
+          "set": "heroicons",
+          "name": "cpu-chip"
+        },
+        "sessions": {
+          "set": "heroicons",
+          "name": "chat-bubble-left-right"
+        },
+        "cron": {
+          "set": "heroicons",
+          "name": "clock"
+        },
+        "sound": {
+          "set": "heroicons",
+          "name": "speaker-wave"
+        },
+        "dock": {
+          "set": "heroicons",
+          "name": "arrows-pointing-out"
+        },
+        "settings": {
+          "set": "heroicons",
+          "name": "cog-6-tooth"
+        },
+        "clip": {
+          "set": "heroicons",
+          "name": "paper-clip"
+        },
+        "mic": {
+          "set": "heroicons",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "heroicons",
+          "name": "paper-airplane"
+        }
+      }
+    },
+    "forest": {
+      "set": "iconoir",
+      "slots": {
+        "backend": {
+          "set": "iconoir",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "iconoir",
+          "name": "message-text"
+        },
+        "cron": {
+          "set": "iconoir",
+          "name": "clock"
+        },
+        "sound": {
+          "set": "iconoir",
+          "name": "sound-high"
+        },
+        "dock": {
+          "set": "iconoir",
+          "name": "maximize"
+        },
+        "settings": {
+          "set": "iconoir",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "iconoir",
+          "name": "attachment"
+        },
+        "mic": {
+          "set": "iconoir",
+          "name": "mic"
+        },
+        "send": {
+          "set": "iconoir",
+          "name": "send"
+        }
+      }
+    },
+    "sand": {
+      "set": "ri",
+      "slots": {
+        "backend": {
+          "set": "ri",
+          "name": "cpu-line"
+        },
+        "sessions": {
+          "set": "ri",
+          "name": "message-3-line"
+        },
+        "cron": {
+          "set": "ri",
+          "name": "time-line"
+        },
+        "sound": {
+          "set": "ri",
+          "name": "volume-up-line"
+        },
+        "dock": {
+          "set": "ri",
+          "name": "focus-3-line"
+        },
+        "settings": {
+          "set": "ri",
+          "name": "settings-3-line"
+        },
+        "clip": {
+          "set": "ri",
+          "name": "attachment-line"
+        },
+        "mic": {
+          "set": "ri",
+          "name": "mic-line"
+        },
+        "send": {
+          "set": "ri",
+          "name": "send-plane-line"
+        }
+      }
+    },
+    "light": {
+      "set": "material-symbols",
+      "slots": {
+        "backend": {
+          "set": "material-symbols",
+          "name": "memory"
+        },
+        "sessions": {
+          "set": "material-symbols",
+          "name": "forum"
+        },
+        "cron": {
+          "set": "material-symbols",
+          "name": "schedule"
+        },
+        "sound": {
+          "set": "material-symbols",
+          "name": "volume-up"
+        },
+        "dock": {
+          "set": "material-symbols",
+          "name": "picture-in-picture"
+        },
+        "settings": {
+          "set": "material-symbols",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "material-symbols",
+          "name": "attachment"
+        },
+        "mic": {
+          "set": "material-symbols",
+          "name": "mic"
+        },
+        "send": {
+          "set": "material-symbols",
+          "name": "send"
+        }
+      }
+    },
+    "violet": {
+      "set": "hugeicons",
+      "slots": {
+        "backend": {
+          "set": "hugeicons",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "hugeicons",
+          "name": "message-02"
+        },
+        "cron": {
+          "set": "hugeicons",
+          "name": "clock-01"
+        },
+        "sound": {
+          "set": "hugeicons",
+          "name": "volume-high"
+        },
+        "dock": {
+          "set": "hugeicons",
+          "name": "target-02"
+        },
+        "settings": {
+          "set": "hugeicons",
+          "name": "settings-01"
+        },
+        "clip": {
+          "set": "hugeicons",
+          "name": "attachment-01"
+        },
+        "mic": {
+          "set": "hugeicons",
+          "name": "mic-01"
+        },
+        "send": {
+          "set": "hugeicons",
+          "name": "sent"
+        }
+      }
+    },
+    "sakura": {
+      "set": "mingcute",
+      "slots": {
+        "backend": {
+          "set": "mingcute",
+          "name": "chip-fill"
+        },
+        "sessions": {
+          "set": "mingcute",
+          "name": "message-3-fill"
+        },
+        "cron": {
+          "set": "mingcute",
+          "name": "time-fill"
+        },
+        "sound": {
+          "set": "mingcute",
+          "name": "volume-fill"
+        },
+        "dock": {
+          "set": "mingcute",
+          "name": "fullscreen-2-fill"
+        },
+        "settings": {
+          "set": "mingcute",
+          "name": "settings-3-fill"
+        },
+        "clip": {
+          "set": "mingcute",
+          "name": "attachment-fill"
+        },
+        "mic": {
+          "set": "mingcute",
+          "name": "mic-2-fill"
+        },
+        "send": {
+          "set": "mingcute",
+          "name": "send-plane-fill"
+        }
+      }
+    },
+    "ocean": {
+      "set": "streamline",
+      "slots": {
+        "backend": {
+          "set": "streamline",
+          "name": "computer-chip-1"
+        },
+        "sessions": {
+          "set": "streamline",
+          "name": "notification-message-alert"
+        },
+        "cron": {
+          "set": "streamline",
+          "name": "alarm-clock"
+        },
+        "sound": {
+          "set": "streamline",
+          "name": "volume-level-high"
+        },
+        "dock": {
+          "set": "streamline",
+          "name": "expand"
+        },
+        "settings": {
+          "set": "streamline",
+          "name": "ai-settings-spark"
+        },
+        "clip": {
+          "set": "streamline",
+          "name": "paperclip-1"
+        },
+        "mic": {
+          "set": "streamline",
+          "name": "voice-scan-2"
+        },
+        "send": {
+          "set": "streamline",
+          "name": "send-email"
+        }
+      }
+    },
+    "ember": {
+      "set": "tabler",
+      "slots": {
+        "backend": {
+          "set": "tabler",
+          "name": "flame"
+        },
+        "sessions": {
+          "set": "tabler",
+          "name": "messages"
+        },
+        "cron": {
+          "set": "tabler",
+          "name": "alarm"
+        },
+        "sound": {
+          "set": "tabler",
+          "name": "volume"
+        },
+        "dock": {
+          "set": "tabler",
+          "name": "crosshair"
+        },
+        "settings": {
+          "set": "tabler",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "tabler",
+          "name": "paperclip"
+        },
+        "mic": {
+          "set": "tabler",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "tabler",
+          "name": "send"
+        }
+      }
+    },
+    "royal": {
+      "set": "lucide",
+      "slots": {
+        "backend": {
+          "set": "lucide",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "lucide",
+          "name": "gem"
+        },
+        "cron": {
+          "set": "lucide",
+          "name": "clock"
+        },
+        "sound": {
+          "set": "lucide",
+          "name": "volume-2"
+        },
+        "dock": {
+          "set": "lucide",
+          "name": "crown"
+        },
+        "settings": {
+          "set": "lucide",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "lucide",
+          "name": "paperclip"
+        },
+        "mic": {
+          "set": "lucide",
+          "name": "mic"
+        },
+        "send": {
+          "set": "lucide",
+          "name": "send-horizontal"
+        }
+      }
+    },
+    "desert": {
+      "set": "heroicons",
+      "slots": {
+        "backend": {
+          "set": "heroicons",
+          "name": "cpu-chip"
+        },
+        "sessions": {
+          "set": "heroicons",
+          "name": "chat-bubble-left-right"
+        },
+        "cron": {
+          "set": "heroicons",
+          "name": "clock"
+        },
+        "sound": {
+          "set": "heroicons",
+          "name": "speaker-wave"
+        },
+        "dock": {
+          "set": "heroicons",
+          "name": "arrows-pointing-out"
+        },
+        "settings": {
+          "set": "heroicons",
+          "name": "cog-6-tooth"
+        },
+        "clip": {
+          "set": "heroicons",
+          "name": "paper-clip"
+        },
+        "mic": {
+          "set": "heroicons",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "heroicons",
+          "name": "paper-airplane"
+        }
+      }
+    },
+    "ghost": {
+      "set": "ph",
+      "slots": {
+        "backend": {
+          "set": "ph",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "ph",
+          "name": "chats"
+        },
+        "cron": {
+          "set": "ph",
+          "name": "timer"
+        },
+        "sound": {
+          "set": "ph",
+          "name": "speaker-high"
+        },
+        "dock": {
+          "set": "ph",
+          "name": "ghost"
+        },
+        "settings": {
+          "set": "ph",
+          "name": "gear"
+        },
+        "clip": {
+          "set": "ph",
+          "name": "paperclip"
+        },
+        "mic": {
+          "set": "ph",
+          "name": "microphone"
+        },
+        "send": {
+          "set": "ph",
+          "name": "paper-plane-tilt"
+        }
+      }
+    },
+    "minecraft": {
+      "set": "pixelarticons",
+      "slots": {
+        "backend": {
+          "set": "pixelarticons",
+          "name": "cpu"
+        },
+        "sessions": {
+          "set": "pixelarticons",
+          "name": "message"
+        },
+        "cron": {
+          "set": "pixelarticons",
+          "name": "clock"
+        },
+        "sound": {
+          "set": "pixelarticons",
+          "name": "volume-3"
+        },
+        "dock": {
+          "set": "pixelarticons",
+          "name": "expand"
+        },
+        "settings": {
+          "set": "pixelarticons",
+          "name": "settings-cog"
+        },
+        "clip": {
+          "set": "pixelarticons",
+          "name": "attachment"
+        },
+        "mic": {
+          "set": "pixelarticons",
+          "name": "mic"
+        },
+        "send": {
+          "set": "pixelarticons",
+          "name": "send"
+        }
+      }
+    },
+    "noir": {
+      "set": "custom",
+      "slots": {
+        "backend": {
+          "set": "custom",
+          "name": "backend"
+        },
+        "sessions": {
+          "set": "custom",
+          "name": "sessions"
+        },
+        "cron": {
+          "set": "custom",
+          "name": "cron"
+        },
+        "sound": {
+          "set": "custom",
+          "name": "sound"
+        },
+        "dock": {
+          "set": "custom",
+          "name": "dock"
+        },
+        "settings": {
+          "set": "custom",
+          "name": "settings"
+        },
+        "clip": {
+          "set": "custom",
+          "name": "clip"
+        },
+        "mic": {
+          "set": "custom",
+          "name": "mic"
+        },
+        "send": {
+          "set": "custom",
+          "name": "send"
+        }
+      }
+    }
+  }
+}

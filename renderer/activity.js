@@ -17,15 +17,27 @@
     return (ms / 1000).toFixed(1) + 's';
   }
 
+  // Tool glyphs: inline Lucide mini-SVGs (12px, currentColor). No emoji,
+  // no text dingbats — the feed reads as one icon language with the rail.
+  const GLYPH = (inner) => `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  const GLYPHS = {
+    term: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    web: '<circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/>',
+    mem: '<path d="M12 20v2m0-20v2m5 16v2m0-20v2M2 12h2m-2 5h2M2 7h2m16 5h2m-2 5h2M20 7h2M7 20v2M7 2v2"/><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="8" height="8" x="8" y="8" rx="1"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/>',
+  };
   function iconFor(name) {
     const n = String(name || '').toLowerCase();
-    if (/terminal|shell|exec|bash/.test(n)) return '▸_';
-    if (/read|cat|file/.test(n)) return '☰';
-    if (/write|edit|patch|apply/.test(n)) return '✎';
-    if (/search|grep|find|glob/.test(n)) return '⌕';
-    if (/browser|web|fetch|http/.test(n)) return '◉';
-    if (/memory/.test(n)) return '❖';
-    return '⚙';
+    if (/terminal|shell|exec|bash/.test(n)) return GLYPH(GLYPHS.term);
+    if (/read|cat|file/.test(n)) return GLYPH(GLYPHS.file);
+    if (/write|edit|patch|apply/.test(n)) return GLYPH(GLYPHS.edit);
+    if (/search|grep|find|glob/.test(n)) return GLYPH(GLYPHS.search);
+    if (/browser|web|fetch|http/.test(n)) return GLYPH(GLYPHS.web);
+    if (/memory/.test(n)) return GLYPH(GLYPHS.mem);
+    return GLYPH(GLYPHS.gear);
   }
 
   function shortArg(args) {
@@ -106,7 +118,7 @@
     if (turn.rows.has(id)) return;
     const row = el('div', 'act-tool running');
     row.innerHTML = '<span class="act-tool-ic"></span><span class="act-tool-main"><span class="act-tool-name"></span><span class="act-tool-arg"></span></span><span class="act-tool-dur"></span>';
-    row.querySelector('.act-tool-ic').textContent = iconFor(p.name);
+    row.querySelector('.act-tool-ic').innerHTML = iconFor(p.name);
     row.querySelector('.act-tool-name').textContent = p.context || p.name || 'tool';
     row.querySelector('.act-tool-arg').textContent = shortArg(p.args);
     const chip = fileChip(p.args);

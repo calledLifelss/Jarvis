@@ -5,22 +5,22 @@
 // Persists: jarvis-pack + jarvis-pack-layers in localStorage.
 (function () {
   const PACKS = [
-    { id: 'jarvis-dark', name: 'Jarvis Dark', vibe: 'The house console. Amber on graphite.', fonts: 'Inter + JetBrains Mono', icons: 'Lucide outline' },
-    { id: 'jarvis-blue', name: 'Ops Deck', vibe: 'Cold blue operations bridge.', fonts: 'Chakra Petch + Space Mono', icons: 'Plug-zap / alarm / crosshair' },
-    { id: 'midnight', name: 'Midnight', vibe: 'Deep indigo night ops.', fonts: 'Space Grotesk + IBM Plex Mono', icons: 'Timer / squares / heavy round' },
-    { id: 'crimson', name: 'Red Alert', vibe: 'Engineering under klaxon light.', fonts: 'Bebas Neue + Roboto Mono', icons: 'Rocket send / zap / stencil' },
-    { id: 'forest', name: 'Phosphor', vibe: 'Green-screen terminal, lovingly.', fonts: 'Ubuntu Mono everywhere', icons: 'Thin phosphor terminal' },
-    { id: 'sand', name: 'Dune Paper', vibe: 'Warm paper console, soft corners.', fonts: 'Quicksand + Courier Prime', icons: 'Calendar / soft circles' },
-    { id: 'light', name: 'Daylight', vibe: 'Paper whites for bright rooms.', fonts: 'Lora serif + PT Mono', icons: 'House voice' },
-    { id: 'violet', name: 'Ultraviolet', vibe: 'Lab glow, violet tubes.', fonts: 'Rajdhani + Fira Mono', icons: 'Sparkles / wand / heart' },
-    { id: 'minecraft', name: 'Overworld', vibe: 'Blocky grass-and-dirt console. No rounded corners survived.', fonts: 'Silkscreen + VT323', icons: 'Chunky blocks' },
-    { id: 'sakura', name: 'Sakura', vibe: 'Late-night tokyo terminal, pink neon rain.', fonts: 'DotGothic + Nanum Coding', icons: 'Heart dock / sparkles' },
-    { id: 'ocean', name: 'Trench', vibe: 'Abyssal teal, pressure-proof.', fonts: 'Oswald + Overpass Mono', icons: 'Anchor dock / sailboat send' },
-    { id: 'ember', name: 'Forge', vibe: 'Embossed serif, forge-room heat.', fonts: 'Cinzel + Cutive Mono', icons: 'Hammer / rocket / alarm' },
-    { id: 'royal', name: 'Velvet Room', vibe: 'Gold on velvet, command with manners.', fonts: 'Cormorant + Major Mono', icons: 'Crown / gem dock' },
+    { id: 'jarvis-dark', name: 'Jarvis Dark', vibe: 'The house console. Amber on graphite.', fonts: 'Inter + JetBrains Mono', icons: 'Lucide' },
+    { id: 'jarvis-blue', name: 'Ops Deck', vibe: 'Cold blue operations bridge.', fonts: 'Chakra Petch + Space Mono', icons: 'Tabler' },
+    { id: 'midnight', name: 'Midnight', vibe: 'Deep indigo night ops.', fonts: 'Space Grotesk + IBM Plex Mono', icons: 'Phosphor' },
+    { id: 'crimson', name: 'Red Alert', vibe: 'Engineering under klaxon light.', fonts: 'Bebas Neue + Roboto Mono', icons: 'Heroicons' },
+    { id: 'forest', name: 'Phosphor', vibe: 'Green-screen terminal, lovingly.', fonts: 'Ubuntu Mono everywhere', icons: 'Iconoir' },
+    { id: 'sand', name: 'Dune Paper', vibe: 'Warm paper console, soft corners.', fonts: 'Quicksand + Courier Prime', icons: 'Remix' },
+    { id: 'light', name: 'Daylight', vibe: 'Paper whites for bright rooms.', fonts: 'Lora serif + PT Mono', icons: 'Material Symbols' },
+    { id: 'violet', name: 'Ultraviolet', vibe: 'Lab glow, violet tubes.', fonts: 'Rajdhani + Fira Mono', icons: 'Hugeicons' },
+    { id: 'minecraft', name: 'Overworld', vibe: 'Blocky grass-and-dirt console. No rounded corners survived.', fonts: 'Silkscreen + VT323', icons: 'Pixel Art Icons' },
+    { id: 'sakura', name: 'Sakura', vibe: 'Late-night tokyo terminal, pink neon rain.', fonts: 'DotGothic + Nanum Coding', icons: 'MingCute' },
+    { id: 'ocean', name: 'Trench', vibe: 'Abyssal teal, pressure-proof.', fonts: 'Oswald + Overpass Mono', icons: 'Streamline' },
+    { id: 'ember', name: 'Forge', vibe: 'Embossed serif, forge-room heat.', fonts: 'Cinzel + Cutive Mono', icons: 'Tabler' },
+    { id: 'royal', name: 'Velvet Room', vibe: 'Gold on velvet, command with manners.', fonts: 'Cormorant + Major Mono', icons: 'Lucide' },
     { id: 'noir', name: 'Noir Desk', vibe: 'Black, white, and a typewriter.', fonts: 'Special Elite everywhere', icons: 'Stamp blocks' },
-    { id: 'desert', name: 'Field Kit', vibe: 'Sun-bleached expedition hardware.', fonts: 'Bebas + Nova Mono', icons: 'Sunrise cron / mountain dock' },
-    { id: 'ghost', name: 'Signal Station', vibe: 'Pale daylight console, teal signal.', fonts: 'Spline Sans + Red Hat Mono', icons: 'Radio tower / ghost dock' },
+    { id: 'desert', name: 'Field Kit', vibe: 'Sun-bleached expedition hardware.', fonts: 'Bebas + Nova Mono', icons: 'Heroicons' },
+    { id: 'ghost', name: 'Signal Station', vibe: 'Pale daylight console, teal signal.', fonts: 'Spline Sans + Red Hat Mono', icons: 'Phosphor' },
   ];
 
   const LAYERS = [
