@@ -215,8 +215,11 @@
     <div class="tab-body hidden" id="tab-backends">
       <h4>Agent backends</h4>
       <div class="backend-row"><span>Mock (built-in)</span><span class="status-pill">ready</span></div>
-      <div class="backend-row"><span>Hermes serve (localhost:9119)</span><span id="hermes-status" class="status-pill">checking…</span></div>
+      <div class="backend-row"><span>Hermes serve</span><span id="hermes-status" class="status-pill">checking…</span></div>
       <div class="backend-row"><span>Claude Code</span><span class="status-pill dim">v2</span></div>
+      <label>Hermes host <span class="hint" style="display:inline">— IP:port of a running `hermes serve`. Same machine: leave it. Friend's PC: point it at yours over LAN/VPN.</span>
+        <input id="hermes-host" type="text" placeholder="127.0.0.1:9119" spellcheck="false" />
+      </label>
       <label>Active backend
         <select id="backend-select">
           <option value="mock" selected>Mock</option>
@@ -227,7 +230,7 @@
         <button id="hermes-reconnect" class="btn ghost sm">↻ Reconnect</button>
         <button id="hermes-newchat" class="btn ghost sm">＋ New chat</button>
       </div>
-      <p class="hint">Live WS JSON-RPC to hermes serve :9119. Model switch is per-chat (--session).</p>
+      <p class="hint">Live WS JSON-RPC to hermes serve. Model switch is per-chat (--session). No serve on this machine? Mock works offline.</p>
     </div>
     <div class="tab-body hidden" id="tab-providers">
       <h4 data-info="Which provider each backend talks to. The model picker follows the mapping. Keys stay in ~/.hermes/keyman, the UI only sees masked values.">Backend → Provider mapping</h4>

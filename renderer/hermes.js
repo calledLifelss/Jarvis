@@ -3,7 +3,21 @@
 // Model list: model.options {explicit_only} -> providers[].models.
 // Switch: config.set {session_id, key:'model', value:'<model> --provider <slug> --session'}.
 (function () {
-  const HERMES_URL = 'http://127.0.0.1:9119';
+  // Hermes host is configurable (Backends tab) so the app can talk to a
+  // remote `hermes serve` on the LAN/VPN, not just localhost.
+  function getHost() {
+    try { return localStorage.getItem('jarvis-hermes-host') || '127.0.0.1:9119'; }
+    catch { return '127.0.0.1:9119'; }
+  }
+  function setHost(h) {
+    const clean = String(h || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!clean) throw new Error('empty host');
+    try { localStorage.setItem('jarvis-hermes-host', clean); } catch {}
+    disconnect();
+    return clean;
+  }
+  const base = () => 'http://' + getHost();
+  const wsBase = () => 'ws://' + getHost();
 
   const st = {
     ws: null, connected: false, sessionId: null, storedSessionId: null,
@@ -39,7 +53,12 @@
   }
 
   async function fetchToken() {
-    const res = await fetch(HERMES_URL + '/', { cache: 'no-store' });
+    let res;
+    try {
+      res = await fetch(base() + '/', { cache: 'no-store' });
+    } catch {
+      throw new Error('cannot reach hermes at ' + getHost() + ' — is `hermes serve` running there?');
+    }
     if (!res.ok) throw new Error('hermes serve HTTP ' + res.status);
     const html = await res.text();
     const m = html.match(/__HERMES_SESSION_TOKEN__="([^"]+)"/);
@@ -51,7 +70,7 @@
     disconnect();
     st.token = await fetchToken();
     await new Promise((resolve, reject) => {
-      const ws = new WebSocket('ws://127.0.0.1:9119/api/ws?token=' + encodeURIComponent(st.token));
+      const ws = new WebSocket(wsBase() + '/api/ws?token=' + encodeURIComponent(st.token));
       const timer = setTimeout(() => { try { ws.close(); } catch {} reject(new Error('WS connect timeout')); }, 8000);
       ws.onopen = () => { clearTimeout(timer); st.ws = ws; st.connected = true; resolve(); };
       ws.onerror = () => { clearTimeout(timer); reject(new Error('WS connection failed')); };
@@ -220,6 +239,7 @@
 
   window.HermesBackend = {
     state: st, connect, disconnect, ensureSession, modelOptions, setModel, chat, newSession, rpc,
+    getHost, setHost,
     listSessions, openSession, history, onEvent: onHermesEvent, interrupt,
     approve: (requestId, choice, sessionId) => rpc('approval.respond', {
       choice, request_id: requestId, ...(sessionId ? { session_id: sessionId } : {}),

@@ -492,7 +492,7 @@
       backendSelect.value = 'mock';
       activeBackend = 'mock';
       try { document.getElementById('rail-conn').textContent = 'offline — mock'; } catch {}
-      addMsg('sys', 'Hermes unreachable — on mock. Run `hermes serve`, then reopen Backends.');
+      addMsg('sys', 'Hermes unreachable (' + (e.message || e).slice(0, 90) + ') — on mock. Same machine: run `hermes serve`. Another PC: set the Hermes host above to your LAN/VPN address.');
       window.setOrbState('idle', 'Idle', 'Mock mode. Ready.');
     }
   }
@@ -507,6 +507,20 @@
   };
 
   // reconnect button lives in backends tab
+  try {
+    const hostInput = document.getElementById('hermes-host');
+    if (hostInput && window.HermesBackend.getHost) {
+      hostInput.value = window.HermesBackend.getHost();
+      hostInput.addEventListener('change', () => {
+        try {
+          const h = window.HermesBackend.setHost(hostInput.value);
+          hostInput.value = h;
+          addMsg('sys', 'Hermes host → ' + h + ' — reconnecting…');
+          if (activeBackend === 'hermes') connectHermes();
+        } catch (e) { addMsg('sys', 'Bad host: ' + (e.message || e)); }
+      });
+    }
+  } catch {}
   document.getElementById('hermes-reconnect').addEventListener('click', () => {
     hermesStatus.classList.remove('ok');
     connectHermes();

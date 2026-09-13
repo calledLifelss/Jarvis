@@ -1,6 +1,6 @@
 {
   "name": "jarvis-chatroom",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop chatroom for AI agent backends",
   "author": {
     "name": "Lifeless",
@@ -58,8 +58,18 @@
       "icon": "build/icons/icon.ico",
       "executableName": "Jarvis",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -80,7 +90,18 @@
     },
     "deb": {
       "artifactName": "${productName}_${version}_amd64.${ext}",
-      "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libuuid1", "libsecret-1-0", "libasound2"]
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libasound2"
+      ]
     },
     "pacman": {
       "artifactName": "${productName}-${version}-x86_64.${ext}"
