@@ -49,7 +49,12 @@
       pendingAsset = r.pick || null;
       downloadedFile = null;
       if (pill) pill.textContent = 'update ready';
-      if (btn) { btn.disabled = false; btn.textContent = '⬇ Update to v' + r.latest; }
+      if (btn) {
+        btn.disabled = false;
+        const sz = r.pick && r.pick.size ? ` (${(r.pick.size / 1048576).toFixed(1)}MB)` : '';
+        const tag = r.pick && r.pick.isPatch ? '⚡ patch' : '⬇ full';
+        btn.textContent = `${tag} Update to v${r.latest}${sz}`;
+      }
       toast('Update found: v' + r.latest + (pendingAsset ? ' (' + pendingAsset.name + ')' : ''), 'ok');
     } catch (e) {
       if (lat) lat.textContent = 'failed';

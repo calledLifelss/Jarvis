@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('jarvis', {
   ttsSpeak: (text, voice, opts) => ipcRenderer.invoke('tts-speak', { text, voice, ...(opts || {}) }),
   providers: (op, args) => ipcRenderer.invoke('providers-call', op, args || {}),
   cli: (op, args) => ipcRenderer.invoke('hermes-cli', op, args || {}),
+  hermesPorts: () => ipcRenderer.invoke('hermes-ports'),
   updates: (op, args) => ipcRenderer.invoke('jarvis-updates', op, args || {}),
 });

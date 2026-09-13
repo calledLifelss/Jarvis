@@ -61,10 +61,15 @@ async function check(currentVersion) {
   };
 }
 
-function pickAsset(assets) {
-  const plat = process.platform;
+function pickAsset(assets, latestVersion) {
+  // Patches first: `Jarvis-<latest>-patch.zip` (~2MB) replaces just
+  // app.asar. No patch for this target? Fall through to full installers.
   const names = assets.map((a) => a.name.toLowerCase());
   const find = (...needles) => assets[names.findIndex((n) => needles.every((w) => n.includes(w)))];
+  const v = String(latestVersion || '').replace(/^v/, '').toLowerCase();
+  const patch = v && find('-patch.zip', v);
+  if (patch) return { ...patch, isPatch: true };
+  const plat = process.platform;
   if (plat === 'win32') return find('.exe') || find('.zip');
   if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip');
   // linux: match the distro's native package, AppImage as fallback
@@ -109,7 +114,9 @@ function download(asset, onProgress) {
 // Install the download. Returns {action, detail}: 'relaunch' (package
 // installed, restart the app), 'replace+relaunch' (portable file, restart),
 // 'manual' (installer opened for the user).
-function install(filePath) {
+// Patches ({isPatch}) go through applyPatch: verify + swap app.asar in place.
+function install(filePath, opts = {}) {
+  if (opts.isPatch || /-patch\.zip$/i.test(filePath)) return applyPatch(filePath);
   return new Promise((resolve, reject) => {
     const lower = filePath.toLowerCase();
     const plat = process.platform;
@@ -141,6 +148,79 @@ function install(filePath) {
     }
     reject(new Error('unknown installer type: ' + path.basename(filePath)));
   });
+}
+
+function shaFile(f) {
+  return crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+}
+
+// Patch flow: unzip -> verify asar hash -> backup current asar -> swap.
+// Rollback on any verification failure. Root-owned targets retry via pkexec.
+function applyPatch(zipPath) {
+  return new Promise((resolve, reject) => {
+    let tmp;
+    try {
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jarvis-patch-'));
+      const { execFileSync } = require('child_process');
+      execFileSync('unzip', ['-oq', zipPath, '-d', tmp]);
+      const meta = JSON.parse(fs.readFileSync(path.join(tmp, 'patch.json'), 'utf8'));
+      if (meta.app !== 'jarvis' || !meta.version || !meta.asarSha256) {
+        throw new Error('patch manifest invalid');
+      }
+      const newAsar = path.join(tmp, 'app.asar');
+      if (shaFile(newAsar) !== meta.asarSha256) throw new Error('patch asar hash mismatch — redownload');
+      const target = findInstalledAsar();
+      if (!target) {
+        throw new Error('cannot find installed app.asar (portable zip? apply manually: replace resources/app.asar)');
+      }
+      const bak = target + '.bak-' + Date.now();
+      fs.copyFileSync(target, bak);
+      try {
+        fs.copyFileSync(newAsar, target);
+      } catch (e) {
+        // likely permissions (native package owned by root) — retry elevated
+        const { spawnSync } = require('child_process');
+        const r = spawnSync('pkexec', ['cp', newAsar, target], { stdio: 'ignore' });
+        if (r.status !== 0) {
+          fs.copyFileSync(bak, target); // roll back
+          throw new Error('needs root to patch ' + target + ' (cancelled?)');
+        }
+      }
+      // sanity: patched asar hashes the same
+      if (shaFile(target) !== meta.asarSha256) {
+        try { fs.copyFileSync(bak, target); } catch {}
+        throw new Error('patched file failed verification — rolled back');
+      }
+      try { fs.unlinkSync(bak); } catch {}
+      resolve({ action: 'relaunch', detail: `Patched to v${meta.version} (~2MB) — restart Jarvis.` });
+    } catch (e) { reject(e); }
+    finally { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} }
+  });
+}
+
+// Where does the running app's asar live? Packaged apps set app.getAppPath()
+// to .../resources/app.asar. Dev runs return the source dir (no asar).
+function findInstalledAsar() {
+  try {
+    // updater runs in main; app may not be imported here — resolve lazily
+    const electron = require('electron');
+    const app = electron.app || (electron.remote && electron.remote.app);
+    const p = app && app.getAppPath && app.getAppPath();
+    if (p && p.endsWith('.asar') && fs.existsSync(p)) return p;
+    if (p && fs.existsSync(path.join(p, 'resources', 'app.asar'))) {
+      return path.join(p, 'resources', 'app.asar');
+    }
+  } catch {}
+  // well-known install spots (same tree the native packages lay down)
+  const cands = [
+    '/opt/Jarvis/resources/app.asar',
+    '/usr/lib/jarvis-chatroom/resources/app.asar',
+  ];
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    cands.push(path.join(process.env.LOCALAPPDATA, 'Jarvis', 'resources', 'app.asar'));
+  }
+  for (const c of cands) { try { if (fs.existsSync(c)) return c; } catch {} }
+  return null;
 }
 
 module.exports = { check, pickAsset, download, install, cmpVer };

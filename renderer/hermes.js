@@ -3,11 +3,14 @@
 // Model list: model.options {explicit_only} -> providers[].models.
 // Switch: config.set {session_id, key:'model', value:'<model> --provider <slug> --session'}.
 (function () {
-  // Hermes host is configurable (Backends tab) so the app can talk to a
-  // remote `hermes serve` on the LAN/VPN, not just localhost.
+  // Host resolution: saved host first, then the live gateway (Hermes binds
+  // :0, a random port — discoverable via `hermes serve --print-port`... which
+  // doesn't exist, so we scan our own listeners), then the :9119 default.
+  const DEFAULT_HOST = '127.0.0.1:9119';
+  let resolvedHost = null;
   function getHost() {
-    try { return localStorage.getItem('jarvis-hermes-host') || '127.0.0.1:9119'; }
-    catch { return '127.0.0.1:9119'; }
+    try { return localStorage.getItem('jarvis-hermes-host') || resolvedHost || DEFAULT_HOST; }
+    catch { return resolvedHost || DEFAULT_HOST; }
   }
   function setHost(h) {
     const clean = String(h || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -18,6 +21,38 @@
   }
   const base = () => 'http://' + getHost();
   const wsBase = () => 'ws://' + getHost();
+
+  // Probe one host:port for a live hermes serve (fast fail, ~1.5s).
+  async function probe(hostport) {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 1500);
+    try {
+      const res = await fetch('http://' + hostport + '/', { cache: 'no-store', signal: c.signal });
+      if (!res.ok) return false;
+      const html = await res.text();
+      return html.includes('__HERMES_SESSION_TOKEN__');
+    } catch { return false; }
+    finally { clearTimeout(t); }
+  }
+
+  // Find the gateway: saved host, then `hermes serve` listeners owned by us.
+  // Exposed for the Reconnect button / diagnostics.
+  async function discover() {
+    try {
+      const saved = localStorage.getItem('jarvis-hermes-host');
+      if (saved && await probe(saved)) { resolvedHost = saved; return saved; }
+    } catch {}
+    // ask main for local hermes listeners (it can read /proc, the page can't)
+    try {
+      const found = await window.jarvis.hermesPorts();
+      for (const p of (found && found.ports) || []) {
+        const hp = '127.0.0.1:' + p;
+        if (await probe(hp)) { resolvedHost = hp; return hp; }
+      }
+    } catch {}
+    if (await probe(DEFAULT_HOST)) { resolvedHost = DEFAULT_HOST; return DEFAULT_HOST; }
+    return null;
+  }
 
   const st = {
     ws: null, connected: false, sessionId: null, storedSessionId: null,
@@ -68,6 +103,11 @@
 
   async function connect() {
     disconnect();
+    // no saved host that answers? find the gateway before failing
+    try {
+      const saved = localStorage.getItem('jarvis-hermes-host');
+      if (!saved) await discover();
+    } catch {}
     st.token = await fetchToken();
     await new Promise((resolve, reject) => {
       const ws = new WebSocket(wsBase() + '/api/ws?token=' + encodeURIComponent(st.token));
@@ -239,7 +279,7 @@
 
   window.HermesBackend = {
     state: st, connect, disconnect, ensureSession, modelOptions, setModel, chat, newSession, rpc,
-    getHost, setHost,
+    getHost, setHost, discover, probe,
     listSessions, openSession, history, onEvent: onHermesEvent, interrupt,
     approve: (requestId, choice, sessionId) => rpc('approval.respond', {
       choice, request_id: requestId, ...(sessionId ? { session_id: sessionId } : {}),

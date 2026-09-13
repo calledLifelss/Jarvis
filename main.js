@@ -253,21 +253,60 @@ app.whenReady().then(() => {
     if (op === 'check') {
       const rel = await updater.check(app.getVersion());
       if (!rel.configured) return rel;
-      const pick = updater.pickAsset(rel.assets || []);
+      const pick = updater.pickAsset(rel.assets || [], rel.latest);
       updCache = { rel, pick };
-      return { ...rel, pick: pick ? { name: pick.name, size: pick.size } : null };
+      return { ...rel, pick: pick ? { name: pick.name, size: pick.size, isPatch: !!pick.isPatch } : null };
     }
     if (op === 'download') {
       if (!updCache || !updCache.pick) throw new Error('check first — no update picked');
       const file = await updater.download(updCache.pick);
-      return { file };
+      return { file, isPatch: !!updCache.pick.isPatch };
     }
     if (op === 'install') {
       const file = a.file;
       if (!file || !fs.existsSync(file)) throw new Error('downloaded file missing — download first');
-      return updater.install(file);
+      const isPatch = !!(updCache && updCache.pick && updCache.pick.isPatch);
+      return updater.install(file, { isPatch });
     }
     throw new Error('updates op not allowed: ' + op);
+  });
+  // ── Hermes gateway discovery: `hermes serve` binds :0 (random port).
+  // The page can't read /proc, main can: scan our own TCP listeners for
+  // hermes-owned ports and hand them back for probing.
+  ipcMain.handle('hermes-ports', async () => {
+    const ports = new Set();
+    try {
+      const tcp = fs.readFileSync('/proc/net/tcp', 'utf8').split('\n').slice(1);
+      const listen = new Set();
+      for (const line of tcp) {
+        const f = line.trim().split(/\s+/);
+        if (f.length < 10 || f[3] !== '0A') continue; // LISTEN only
+        const port = parseInt(f[1].split(':')[1], 16);
+        if (port > 0) listen.add(port + ':' + f[9]); // port:inode
+      }
+      const byInode = new Map();
+      for (const pid of fs.readdirSync('/proc').filter((p) => /^\d+$/.test(p))) {
+        let exe = '';
+        try { exe = fs.readlinkSync(`/proc/${pid}/exe`); } catch {}
+        let cmd = '';
+        try { cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replace(/\0/g, ' '); } catch {}
+        if (!/hermes/i.test(exe) && !/hermes/i.test(cmd)) continue;
+        let fds = [];
+        try { fds = fs.readdirSync(`/proc/${pid}/fd`); } catch { continue; }
+        for (const fd of fds) {
+          try {
+            const link = fs.readlinkSync(`/proc/${pid}/fd/${fd}`);
+            const m = link.match(/^socket:\[(\d+)\]$/);
+            if (m) byInode.set(m[1], true);
+          } catch {}
+        }
+      }
+      for (const entry of listen) {
+        const [port, inode] = entry.split(':');
+        if (byInode.has(inode)) ports.add(parseInt(port, 10));
+      }
+    } catch (e) { console.error('[jarvis-ports]', e.message); }
+    return { ports: [...ports].sort((a, b) => a - b) };
   });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
