@@ -1,6 +1,5 @@
-// Activity feed: per-turn timeline (thinking, reasoning, tool runs with
-// live timers + results + file chips, status notes, approvals).
-// API: Activity.beginTurn(), Activity.pushDelta(), Activity.event(type, ev),
+// Activity feed: per-turn timeline (thinking, tool runs with timers +
+// results, approvals). API: Activity.beginTurn/pushDelta/event.
 //      Activity.endTurn(text), Activity.approve(requestId, choice)
 (function () {
   const feedHost = () => document.getElementById('activity');

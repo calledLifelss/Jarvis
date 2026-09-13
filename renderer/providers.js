@@ -1,6 +1,5 @@
-// Providers: list / add / edit / test API providers + keys through the
-// providers_bridge (same protocol as providers-manager). Renderer only ever
-// sees masked keys. Backend->provider mapping via per-chat config.set.
+// Providers: list/add/edit/test API providers + keys. Renderer only
+// ever sees masked keys.
 // API: Providers.init(), Providers.refresh()
 (function () {
   let providers = [];

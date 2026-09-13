@@ -1,4 +1,4 @@
-// Jarvis Chatroom — Electron main process: main window + mini-orb window.
+// Jarvis Chatroom — main: windows + IPC.
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const { spawn, execFile } = require('child_process');
@@ -36,8 +36,8 @@ function createMainWindow() {
   mainWin.webContents.on('did-fail-load', (_e, code, desc) => console.error('[jarvis-main] did-fail-load', code, desc));
   mainWin.webContents.on('console-message', (_e, _lvl, msg) => console.log('[jarvis-render]', msg));
   mainWin.on('closed', () => { mainWin = null; });
-  // OS minimize docks the orb (preventDefault + hide works on X11; on Wayland
-  // KWin may swallow the event, so the rail's dock button covers that case).
+  // OS minimize docks the orb (preventDefault + hide; on Wayland KWin
+  // may swallow the event, the rail dock button covers that).
   mainWin.on('minimize', (e) => {
     e.preventDefault();
     mainWin.hide();
@@ -99,9 +99,8 @@ app.whenReady().then(() => {
   ipcMain.on('enter-mini-mode', createMiniWindow);
   ipcMain.on('exit-mini-mode', closeMiniWindow);
   ipcMain.on('mini-close-orb', () => { if (miniWin) miniWin.close(); });
-  // ── Providers bridge (same protocol as providers-manager) ──
-  // Long-lived python bridge over stdio, JSON-lines. Renderer never sees
-  // raw keys (only masked) and never touches config.yaml directly.
+  // ── Providers bridge (providers-manager protocol) ──
+  // Long-lived python bridge over stdio. Renderer only sees masked keys.
   const KEYMAN = path.join(os.homedir(), '.hermes', 'keyman');
   const BRIDGE_PY = path.join(KEYMAN, 'providers_bridge.py');
   const VENV_PY = path.join(os.homedir(), '.hermes', 'hermes-agent', 'venv', 'bin', 'python');
@@ -149,12 +148,10 @@ app.whenReady().then(() => {
     if (!BRIDGE_OPS.has(op)) throw new Error('bridge op not allowed: ' + op);
     return bridgeCall(op, args || {});
   });
-  // ── hermes CLI bridge: skills + cron through the real CLI ──
-  // Why execFile, not WS: the :9119 WS router only serves session/prompt/
-  // config/slash methods (probed 2026-09-13 — skills.*, cron.* all -32601).
-  // The CLI is the supported contract for skills + cron on this box.
-  // Strict allowlist of argv (no shell, no interpolation); mutations that
-  // take free text (prompt/script paths) pass as single argv entries.
+  // ── hermes CLI: skills + cron ──
+  // The :9119 WS router only does session/prompt/config/slash
+  // (skills.* / cron.* all return -32601), so this goes through the CLI.
+  // execFile with a strict argv allowlist, no shell.
   const HERMES_BIN = path.join(os.homedir(), '.local', 'bin', 'hermes');
   const CLI_ALLOW = new Set([
     'skills.list', 'skills.inspect', 'skills.search', 'skills.browse',
@@ -191,7 +188,7 @@ app.whenReady().then(() => {
       } else if (a.query) argv.push(String(a.query).slice(0, 120));
       if (a.limit) argv.push('--limit', String(Math.min(50, parseInt(a.limit, 10) || 20)));
     } else if (op === 'skills.install' || op === 'skills.uninstall' || op === 'skills.update') {
-      // install/uninstall need a name; update without one = update all outdated
+      // update without a name = update all outdated
       if (op !== 'skills.update' || a.name) {
         if (!a.name) throw new Error(op + ' needs name');
         argv.push(String(a.name).slice(0, 160));
@@ -199,7 +196,7 @@ app.whenReady().then(() => {
       if (a.yes) argv.push('-y');
     } else if (op === 'cron.list' || op === 'cron.status' || op === 'cron.doctor') {
       if (op === 'cron.list' && a.all) argv.push('--all');
-      // default list hides one-shots/paused; UI passes all:true so nothing is hidden
+      // default list hides one-shots/paused; UI passes all:true
     } else if (op === 'cron.runs') {
       if (a.job) argv.push(String(a.job).slice(0, 120));
       if (a.limit) argv.push('--limit', String(Math.min(500, parseInt(a.limit, 10) || 20)));
@@ -232,8 +229,7 @@ app.whenReady().then(() => {
     }
     return cliRun(argv, op.startsWith('skills.install') || op === 'skills.update' ? 180000 : 60000);
   });
-  // Edge TTS via native JS client (edge_tts_native.js — same wire protocol
-  // as edge-tts, pure JS: no python on user machines, warm WS per voice).
+  // Edge TTS, native JS (no python on user machines, warm WS per voice).
   const edgeTTS = require(path.join(__dirname, 'edge_tts_native.js'));
   app.on('before-quit', () => {});
   ipcMain.handle('tts-speak', async (_ev, { text, voice, rate, pitch, volume }) => {
@@ -246,10 +242,9 @@ app.whenReady().then(() => {
     if (!buf || !buf.length) throw new Error('tts produced no audio (voice may be retired)');
     return { ok: true, audio: buf.toString('base64') };
   });
-  // ── Self-update: GitHub releases, no extra deps ──
-  // Channel baked at build time (release/channel.json). Renderer drives
-  // check -> download -> install through this handler; picked asset cached
-  // main-side between check and download.
+  // ── Self-update (GitHub releases) ──
+  // Channel baked at build time in release/channel.json. The renderer
+  // drives check -> download -> install; picked asset cached main-side.
   const updater = require(path.join(__dirname, 'updater.js'));
   let updCache = null; // {rel, pick}
   ipcMain.handle('jarvis-updates', async (_ev, op, args) => {

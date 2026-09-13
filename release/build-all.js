@@ -1,7 +1,5 @@
-// Full release run: syntax gate -> linux targets -> win targets ->
-// win portable-zip -> channel.json -> checksums -> Desktop drop folder.
-// Usage: npm run release
-// Env: JARVIS_REPO=user/repo (bakes the update channel into builds).
+// Release: syntax gate -> builds -> win zip -> channel -> checksums.
+// JARVIS_REPO=user/repo bakes the update channel.
 const { execFileSync, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');

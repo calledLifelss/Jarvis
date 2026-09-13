@@ -1,6 +1,5 @@
-// Schedules: cron jobs via `hermes cron ...`. List, create, pause/resume,
-// run-now, remove, runs history, scheduler status. All through the
-// hermes-cli IPC bridge (execFile allowlist, no shell).
+// Schedules: cron jobs (list/create/pause/resume/run/remove/runs).
+// All through the hermes-cli bridge.
 (function () {
   const $ = (id) => document.getElementById(id);
 

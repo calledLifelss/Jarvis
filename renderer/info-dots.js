@@ -1,6 +1,5 @@
-// Info dots: small ⓘ buttons beside controls that need explaining.
-// Hover (or focus) for 1.5s -> a small bubble fades in above the dot with
-// a quick explanation. Leaving early cancels; Esc dismisses.
+// Info dots: ⓘ beside controls that need explaining. Hover 1.5s for
+// the bubble; leaving early cancels, Esc dismisses.
 // API: InfoDots.attachAll() — scans [data-info] elements once.
 (function () {
   const HOLD_MS = 1500;

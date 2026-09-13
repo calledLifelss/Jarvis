@@ -1,5 +1,5 @@
-// Chatroom app: orb-over-chat, Hermes WS backend + model selector,
-// mock fallback, Edge TTS voice-out, rail, settings, mini-mode hook.
+// Chatroom: orb, Hermes WS + model picker, mock fallback, voice-out,
+// rail, settings, mini-mode.
 (function () {
   const messagesEl = document.getElementById('messages');
   const input = document.getElementById('chat-input');
@@ -25,7 +25,7 @@
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // Operator-log message: timestamp gutter (data-ts) + label line + body block.
+  // message row: timestamp gutter + label + body
   const ROLE_LABEL = { user: 'you', agent: 'jarvis', sys: '' };
   function nowTs() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -79,7 +79,7 @@
     }).join('');
   }
 
-  // Finalize a streamed row: full rich render + copy buttons.
+  // streamed row done: full render + copy buttons
   function finalizeBubble(div, full) {
     if (!div || !div.isConnected) return;
     const body = div.querySelector('.msg-body');
@@ -93,7 +93,7 @@
     wireCopyButtons(body);
   }
 
-  // Live status row: hairline sweep + label + elapsed, not bouncing dots.
+  // status row: hairline sweep + label + elapsed
   function addTyping() {
     const div = document.createElement('div');
     div.className = 'msg agent live';
@@ -107,7 +107,7 @@
     return div;
   }
 
-  // Activity feed host lives inside the turn block (below the user msg, above reply)
+  // feed host sits inside the turn block, below the user msg
   function addActivityHost() {
     const host = document.createElement('div');
     host.className = 'msg agent act-host-msg';
@@ -255,7 +255,7 @@
     if (layer && !layer.classList.contains('docked') && document.querySelectorAll('.msg.user').length === 0) {
       layer.classList.add('docked');
     }
-    // slash commands execute locally via slash.exec and render inline
+    // slash commands run locally and render inline
     if (text.startsWith('/') && activeBackend === 'hermes' && !attached.length) {
       input.value = '';
       addMsg('user', text);
@@ -274,7 +274,7 @@
     stopToken = { stopped: false };
     setSendMode('stop');
     refreshScheduleBtn();
-    // one stale #activity host at a time (ids must stay unique)
+    // one #activity host at a time (ids must stay unique)
     const stale = document.getElementById('activity');
     if (stale) stale.removeAttribute('id');
     addMsg('user', text || '(files attached)');
@@ -363,7 +363,7 @@
   }
 
   btnSend.addEventListener('click', sendMessage);
-  // Messages typed in the docked orb arrive here on restore
+  // docked-orb messages arrive here on restore
   window.addEventListener('focus', () => {
     let pending = null;
     try { pending = localStorage.getItem('jarvis-mini-pending'); localStorage.removeItem('jarvis-mini-pending'); } catch {}
@@ -372,7 +372,7 @@
       sendMessage();
     }
   });
-  // Starter prompts on the welcome stage
+  // welcome-stage starter prompts
   document.querySelectorAll('#stage-hints button').forEach((b) => {
     b.addEventListener('click', () => {
       input.value = b.dataset.q || b.textContent;
@@ -386,12 +386,12 @@
   try { window.InfoDots && window.InfoDots.attachAll(); } catch {}
   try { window.Skills && window.Skills.init(); } catch {}
   try { window.Cron && window.Cron.init(); } catch {}
-  // Backend->provider mapping: scope the model picker to the mapped provider.
+  // model picker follows the mapped provider
   window.JarvisApplyProvider = async function (providerId) {
     if (!providerId) { await fillModels(); return; }
     await fillModels(providerId);
   };
-  // Esc also stops a live turn
+  // Esc stops a live turn too
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && busy) { stopAll(); return; }
     if (e.key === 'Enter') sendMessage();
@@ -527,7 +527,7 @@
     if (activeBackend === 'hermes' && !window.HermesBackend.state.connected) connectHermes();
   });
 
-  // --- Sessions: inline rail list (no floating dropdown) -----------------------
+  // --- Sessions: inline rail list -----------------------------------
   const sessToggle = document.getElementById('sess-toggle');
   const sessMenu = document.getElementById('sess-menu');
   const sessVeil = document.getElementById('sess-veil'); // inert legacy hook
@@ -559,7 +559,7 @@
     } catch { return ''; }
   }
   async function loadSessions(force) {
-    // cached list renders instantly; background refresh keeps it fresh
+    // cached list first, refresh in background
     if (!force && sessCache && Date.now() - sessCacheAt < SESS_TTL) {
       renderSessionRows(sessCache);
       refreshSessionsBg();
@@ -703,7 +703,7 @@
   const savedTheme = null;
   if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 
-  // --- Voice-out toggle + test ----------------------------------------------
+  // --- Voice-out -------------------------------------------------
   const btnSound = document.getElementById('btn-sound');
   btnSound.addEventListener('click', () => {
     window.voiceOn = !window.voiceOn;
@@ -817,10 +817,10 @@
     }
   });
 
-  // --- speakText: Edge TTS primary, built-in fallback --------------------------
+  // --- speakText ---------------------------------------------------
   function speechClean(text) {
     let t = String(text || '');
-    // code fences -> short placeholder (hearing brackets spelled out is awful)
+    // code fences read aloud terribly, collapse them
     t = t.replace(/```[\s\S]*?```/g, ' [code omitted] ');
     t = t.replace(/`([^`]+)`/g, '$1');
     t = t.replace(/[*_#>]+/g, '');
@@ -832,15 +832,15 @@
     const clean = speechClean(text);
     if (!clean.trim()) return;
     window.setOrbState('speaking', 'Speaking…', clean.slice(0, 80));
-    // split into sentences and PLAY AS EACH CHUNK ARRIVES (pipeline, not batch):
-    // first audio starts while later chunks still synthesize — ~2-4s faster feel
+    // play each chunk as it arrives instead of batching: first audio
+    // starts while later chunks still synthesize
     const chunks = clean.match(/[^.!?…\n]+[.!?…]+["”)]?\s*|[^.!?…\n]+$/g) || [clean];
     const queue = chunks.map((c) => c.trim()).filter(Boolean).slice(0, 12);
     for (const chunk of queue) {
       try {
         await window.EdgeTTS.speak(chunk);
       } catch (e) {
-        // per-chunk fallback: browser voice for that chunk, keep going
+        // that chunk falls back to the built-in voice, keep going
         try {
           await new Promise((res) => {
             const u = new SpeechSynthesisUtterance(chunk.slice(0, 400));
@@ -855,7 +855,7 @@
     if (window.getOrbState() === 'speaking') window.setOrbState('idle', 'Idle', 'Ready.');
   };
 
-  // --- transcribeAudio: real cloud transcription --------------------------------
+  // --- transcribeAudio ---------------------------------------------
   window.transcribeAudio = async function (blob) {
     const key = (document.getElementById('stt-key').value || '').trim() || localStorage.getItem('jarvis-stt-key') || '';
     if (!key) {

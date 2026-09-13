@@ -1,9 +1,5 @@
-// Voice-out: persistent edge-tts daemon via main (no per-chunk spawn).
-// - English + Persian voices, AUTO language detect per chunk (fa script ->
-//   fa voice, else en voice). Mixed replies switch mid-stream.
-// - Quality: markdown/code stripped (never spoken), URLs/emails spelled
-//   sanely, breathing pauses at sentence ends, loudness normalized.
-// - Speed: rate/pitch/volume knobs persisted; daemon keeps one warm WS.
+// Voice-out through main. Persian script per chunk picks the fa voice,
+// everything else uses en. Markdown/code never spoken, URLs spelled out.
 (function () {
   const VOICES = [
     // English — Jarvis shelf

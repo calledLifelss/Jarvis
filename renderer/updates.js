@@ -1,4 +1,4 @@
-// Updates tab: check channel -> enable Update -> download w/ progress -> install.
+// Check channel -> Update -> download -> install.
 (function () {
   const $ = (id) => document.getElementById(id);
   let pendingAsset = null;

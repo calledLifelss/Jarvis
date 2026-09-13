@@ -1,6 +1,5 @@
-// Slash palette: type / in the composer -> live Hermes command suggestions
-// (complete.slash), Enter/Tab/click inserts, send executes via slash.exec
-// and renders the output inline as a sys bubble.
+// Slash palette: / in the composer -> command suggestions, Enter inserts,
+// send executes and renders inline as a sys bubble.
 (function () {
   let menu = null, input = null, items = [], sel = 0, open = false;
   let debounce = null;

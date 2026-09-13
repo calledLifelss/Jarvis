@@ -1,5 +1,4 @@
-// Voice module: push-to-talk recording pill with live mic bars,
-// cloud STT hookup point + Edge TTS speak() hookup point.
+// Push-to-talk pill with live mic bars. Transcription + speak hooks below.
 (function () {
   const btnMic = document.getElementById('btn-mic');
   const recPill = document.getElementById('rec-pill');

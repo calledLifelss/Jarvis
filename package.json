@@ -1,7 +1,7 @@
 {
   "name": "jarvis-chatroom",
   "version": "1.0.0",
-  "description": "Jarvis-style chatroom fronting Hermes and other agent backends",
+  "description": "Desktop chatroom for AI agent backends",
   "author": {
     "name": "Lifeless",
     "email": "hello@calledlifeless.eu.cc"
@@ -50,7 +50,7 @@
     "linux": {
       "icon": "build/icons",
       "category": "Utility",
-      "description": "Jarvis-style chatroom for AI agent backends",
+      "description": "Desktop chatroom for AI agent backends",
       "executableName": "jarvis",
       "maintainer": "Lifeless <hello@calledlifeless.eu.cc>"
     },

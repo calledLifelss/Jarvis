@@ -1,4 +1,4 @@
-// Safe IPC bridge: renderer <-> main. No Node access in the page.
+// Safe IPC bridge. No Node in the page.
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('jarvis', {

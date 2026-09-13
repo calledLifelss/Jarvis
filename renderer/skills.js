@@ -1,6 +1,5 @@
-// Skills: installed list via `hermes skills list`, toggle state read from
-// the table, inspect preview, hub search/browse/install. All through the
-// hermes-cli IPC bridge (execFile allowlist, no shell).
+// Skills: installed list, inspect, hub search/install. All through
+// the hermes-cli bridge (allowlist, no shell).
 // Table parsing is defensive: box-drawing rows only, never header/separator.
 (function () {
   const $ = (id) => document.getElementById(id);

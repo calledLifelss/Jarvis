@@ -1,6 +1,4 @@
-// Orb renderer: amber holographic sphere. Dense particle shell, wireframe,
-// fragmented panels, HUD ticks, light trails, hot golden core with bloom.
-// API: setOrbState(state, coreText, subText), getOrbState()
+// Canvas orb. setOrbState(state, coreText, subText), getOrbState().
 (function () {
   const canvas = document.getElementById('orb');
   const coreEl = document.getElementById('orb-core-text');

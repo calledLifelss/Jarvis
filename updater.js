@@ -1,9 +1,7 @@
-// Self-update without electron-updater: GitHub releases, zero extra deps.
-// Channel is baked at build time (release/channel.json); dev runs show
-// "not configured" instead of phoning anywhere.
-// Flow: check() -> compare semver -> download asset to temp with progress ->
-// install(): rpm/deb/pkg via pkexec GUI prompt, AppImage/zip replace, win
-// hands the exe installer to the user. Never force-restarts.
+// Self-update off GitHub releases, no extra deps. The channel is baked
+// at build time (release/channel.json); dev builds report unconfigured.
+// check -> compare -> download to tmp -> install (native package via
+// pkexec prompt, exe handed to the user). Never force-restarts.
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
@@ -69,7 +67,7 @@ function pickAsset(assets) {
   const find = (...needles) => assets[names.findIndex((n) => needles.every((w) => n.includes(w)))];
   if (plat === 'win32') return find('.exe') || find('.zip');
   if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip');
-  // linux: prefer native package for this distro, else AppImage
+  // linux: match the distro's native package, AppImage as fallback
   try {
     const osrel = fs.readFileSync('/etc/os-release', 'utf8');
     if (/ID_LIKE=.*(debian|ubuntu)|ID=(debian|ubuntu|linuxmint|pop)/.test(osrel)) return find('.deb') || find('.appimage');
@@ -86,7 +84,7 @@ function download(asset, onProgress) {
     const lib = asset.url.startsWith('https:') ? https : http;
     const req = lib.get(asset.url, { headers: { 'user-agent': 'jarvis-updater' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        // follow github's signed-URL redirect
+        // release assets live behind signed-URL redirects
         download({ ...asset, url: res.headers.location }, onProgress).then(resolve, reject);
         res.resume();
         return;
@@ -108,23 +106,22 @@ function download(asset, onProgress) {
   });
 }
 
-// Install the downloaded file. Returns {installed, action, detail}:
-// action is 'relaunch' (installer ran, restart the app), 'replace+relaunch'
-// (portable: we swapped the file, user restarts), or 'manual' (opened the
-// installer for the user — windows exe).
+// Install the download. Returns {action, detail}: 'relaunch' (package
+// installed, restart the app), 'replace+relaunch' (portable file, restart),
+// 'manual' (installer opened for the user).
 function install(filePath) {
   return new Promise((resolve, reject) => {
     const lower = filePath.toLowerCase();
     const plat = process.platform;
     if (plat === 'win32' || lower.endsWith('.exe')) {
-      // silent-ish NSIS install, then user restarts the app themselves
+      // portable exe: launch the installer, user finishes it themselves
       const child = spawn(`"${filePath}"`, ['/S'], { shell: true, detached: true, stdio: 'ignore' });
       child.unref();
       resolve({ action: 'manual', detail: 'Installer launched — finish setup, then reopen Jarvis.' });
       return;
     }
     if (lower.endsWith('.rpm') || lower.endsWith('.deb') || lower.includes('.pkg.tar.')) {
-      // GUI privilege prompt; dnf/apt/pacman pick the right tool per suffix
+      // pkexec prompt, right package manager per suffix
       const mgr = lower.endsWith('.rpm')
         ? `dnf install -y "${filePath}" || yum install -y "${filePath}" || rpm -Uvh "${filePath}"`
         : lower.endsWith('.deb')

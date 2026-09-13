@@ -21,7 +21,7 @@
   </div>
 
   <div class="rail-group">
-    <div class="rail-grouphead" data-info="Your chats live here. New starts fresh, List shows the last 60 with message counts — click one to reopen it.">
+    <div class="rail-grouphead" data-info="Chats live here. New starts fresh, List shows the last 60 — click one to reopen it.">
       <span>Session</span>
       <button id="sess-toggle" class="rail-new" title="Start a new chat">New</button>
     </div>
@@ -35,13 +35,13 @@
   </div>
 
   <div class="rail-group">
-    <div class="rail-grouphead" data-info="Which model answers in this chat. Switching applies per-chat (--session) so other chats keep theirs. The line below shows the live model."><span>Model</span></div>
+    <div class="rail-grouphead" data-info="Which model answers here. Switching is per-chat, other chats keep theirs. The line below shows the live model."><span>Model</span></div>
     <select id="model-select" title="Hermes model for this chat"><option>connecting…</option></select>
     <div id="model-hint" class="hint"></div>
   </div>
 
   <div class="rail-group">
-    <div class="rail-grouphead" data-info="Backend opens connection settings. Schedules opens timed jobs. Voice toggles spoken replies. Orb dock shrinks Jarvis to a corner bubble. Settings holds everything else."><span>Operate</span></div>
+    <div class="rail-grouphead" data-info="Connection settings, timed jobs, spoken replies, corner-bubble dock. Everything else is under Settings."><span>Operate</span></div>
     <button id="rail-backend" class="rail-row" title="Backend settings">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/><path d="M4 10h-2M4 14h-2M22 10h-2M22 14h-2M10 4V2M14 4V2M10 22v-2M14 22v-2"/></svg>
       <span class="rail-rowlabel">Backend</span>
@@ -167,7 +167,7 @@
           <option value="piper" disabled>Piper offline (later)</option>
         </select>
       </label>
-      <label data-info="Auto detects Persian script per sentence and switches voices mid-reply. Force English or Persian to lock one voice for everything.">Language mode
+      <label data-info="Persian script per sentence picks the fa voice, the rest uses en. Lock one voice with English/Persian only.">Language mode
         <select id="tts-langmode">
           <option value="auto" selected>Auto — English + Persian</option>
           <option value="en">English only</option>
@@ -205,10 +205,10 @@
         <button id="tts-test" class="btn ghost sm">Test voice</button>
         <button id="tts-test-fa" class="btn ghost sm">تست فارسی</button>
       </div>
-      <p class="hint">Transcription is ears-only (STT). Voice-out is Edge TTS: free, no key, ~300 neural voices.</p>
+      <p class="hint">Free, no key, ~300 neural voices.</p>
     </div>
     <div class="tab-body hidden" id="tab-themes">
-      <h4 data-info="16 full scenes — palette, type, icons, orb story. Each card's Activate button switches the whole app; the four dropdowns pick which layers follow the pack and which stay house.">Theme packs <span class="prov-countpill" id="pack-count">…</span></h4>
+      <h4 data-info="16 scenes: palette, type, icons, orb. Activate switches the whole app; the dropdowns pick which layers follow the pack.">Theme packs <span class="prov-countpill" id="pack-count">…</span></h4>
       <p class="hint">Full scenes — palette, type, icons, orb story. Per-pack dropdowns pick which layers follow the pack and which stay house.</p>
       <div id="pack-gallery" class="pack-gallery"></div>
     </div>
@@ -230,7 +230,7 @@
       <p class="hint">Live WS JSON-RPC to hermes serve :9119. Model switch is per-chat (--session).</p>
     </div>
     <div class="tab-body hidden" id="tab-providers">
-      <h4 data-info="Which API provider each backend talks to. Pick one and the model picker scopes to its models instantly. Keys live in the ~/.hermes/keyman vault — the app only ever sees masked versions.">Backend → Provider mapping</h4>
+      <h4 data-info="Which provider each backend talks to. The model picker follows the mapping. Keys stay in ~/.hermes/keyman, the UI only sees masked values.">Backend → Provider mapping</h4>
       <div id="prov-mapping"></div>
       <h4>Providers <span class="prov-countpill" id="prov-count">…</span></h4>
       <div class="row">
@@ -271,7 +271,7 @@
       </div>
       <div id="prov-test-out" class="prov-test-out"></div>
       <div id="prov-toast" class="prov-toast"></div>
-      <p class="hint">Keys live in ~/.hermes/keyman vault (never in config). Same engine as your providers-manager.</p>
+      <p class="hint">Keys stay in ~/.hermes/keyman, never in config.</p>
     </div>
     <div class="tab-body hidden" id="tab-skills">
       <h4>Installed skills <span class="prov-countpill" id="skills-count">…</span></h4>
@@ -283,7 +283,7 @@
       </div>
       <label>Filter<input id="skills-filter" type="text" placeholder="filter installed…" /></label>
       <div id="skills-list" class="prov-list"></div>
-      <h4 data-info="The public skill hub. Search, click a card to stage its identifier, then Install — it lands in your skills dirs like a `hermes skills` install.">Skill hub</h4>
+      <h4 data-info="Public skill hub. Search, stage an identifier, Install — same as a `hermes skills` install.">Skill hub</h4>
       <div class="row">
         <input id="skills-hub-q" type="text" placeholder="search hub, or identifier to install…" style="flex:1" />
       </div>
@@ -294,10 +294,10 @@
       </div>
       <div id="skills-detail" class="prov-test-out" style="max-height:220px"></div>
       <div id="skills-toast" class="prov-toast"></div>
-      <p class="hint">Same source as `hermes skills` — installs land in your skills dirs.</p>
+      <p class="hint">Same source as `hermes skills`.</p>
     </div>
     <div class="tab-body hidden" id="tab-cron">
-      <h4 data-info="Jobs that fire on the gateway ticker — same store as `hermes cron`. Select one for Pause / Resume / Run now / Remove, or scroll down to create a new timed job.">Scheduled jobs <span class="prov-countpill" id="cron-count">…</span></h4>
+      <h4 data-info="Same store as `hermes cron`, fires on the gateway ticker. Select one to Pause / Resume / Run / Remove, or create a new job below.">Scheduled jobs <span class="prov-countpill" id="cron-count">…</span></h4>
       <div id="cron-status-line" class="hint">scheduler: checking…</div>
       <div class="row">
         <button id="cron-refresh" class="btn ghost sm">↻ Refresh</button>
@@ -333,17 +333,17 @@
       </div>
       <div id="cron-detail" class="prov-test-out" style="max-height:220px"></div>
       <div id="cron-toast" class="prov-toast"></div>
-      <p class="hint">Same store as `hermes cron` — jobs fire on the gateway ticker.</p>
+      <p class="hint">Same store as `hermes cron`.</p>
     </div>
     <div class="tab-body hidden" id="tab-updates">
-      <h4 data-info="Checks your release channel for a newer Jarvis build. Press Check, then Update when one appears — the app downloads it and installs on restart.">App updates <span class="prov-countpill" id="upd-pill">…</span></h4>
+      <h4 data-info="Checks the release channel for a newer build. Check, then Update — downloads and installs on restart.">App updates <span class="prov-countpill" id="upd-pill">…</span></h4>
       <div class="backend-row"><span>Installed</span><span class="status-pill" id="upd-current">…</span></div>
       <div class="backend-row"><span>Latest release</span><span class="status-pill dim" id="upd-latest">unknown</span></div>
       <div class="row">
         <button id="upd-check" class="btn ghost sm">↻ Check for updates</button>
         <button id="upd-install" class="btn primary sm" disabled>⬇ Update</button>
       </div>
-      <div id="upd-note" class="hint">Checks your update channel (set at build time).</div>
+      <div id="upd-note" class="hint">Channel is set at build time.</div>
       <div id="upd-toast" class="prov-toast"></div>
     </div>
   </div>

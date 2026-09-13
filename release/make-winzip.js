@@ -1,5 +1,4 @@
-// Zip the win-unpacked dir into Jarvis-<ver>-win-portable.zip.
-// Pure node (no zip binary needed) so it works everywhere.
+// Zip win-unpacked into Jarvis-<ver>-win-portable.zip (needs `zip`).
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');

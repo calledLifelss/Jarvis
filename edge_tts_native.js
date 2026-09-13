@@ -1,7 +1,5 @@
-// Edge TTS, native JS (no python). Same wire protocol as edge-tts 7.x:
-// wss speech.config + ssml posts, Sec-MS-GEC token, MUID cookie,
-// 24khz-48kbitrate-mono-mp3 binary frames.
-// One warm WS per voice-config; synths queue behind it.
+// Edge TTS over plain WebSocket, no python. Same framing as edge-tts 7.x.
+// One warm socket per voice config; synths queue behind it.
 const crypto = require('crypto');
 const WebSocket = require('ws');
 
@@ -22,7 +20,7 @@ function secMsGec() {
 function muid() { return crypto.randomBytes(16).toString('hex').toUpperCase(); }
 function connectId() { return crypto.randomUUID().replace(/-/g, ''); }
 function dateStr() {
-  // edge-tts date_to_string: JS-style UTC string
+  // JS-style UTC string the endpoint expects
   const d = new Date();
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -37,7 +35,7 @@ function mkssml(voice, rate, pitch, volume, text) {
     `<voice name='${voice}'><prosody pitch='${pitch}' rate='${rate}' volume='${volume}'>${escXml(text)}</prosody></voice></speak>`;
 }
 
-// Split like edge-tts: chunks under one WS turn, text split at whitespace.
+// Long text goes as multiple ssml posts under one turn.
 function splitText(text, limit = 1500) {
   const t = String(text || '');
   if (t.length <= limit) return [t];
@@ -67,8 +65,8 @@ function connectWs() {
         Origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
         Cookie: `muid=${muid()};`,
       },
-      // NOTE: perMessageDeflate must stay OFF — negotiating compression
-      // makes the service downgrade to audio-16khz and kill the turn (1007).
+      // Compression off: negotiating it makes the endpoint downgrade
+      // the format and kill the turn (1007).
       perMessageDeflate: false,
     });
     const timer = setTimeout(() => { try { ws.close(); } catch {} reject(new Error('tts connect timeout')); }, 15000);
@@ -97,10 +95,8 @@ function synthOnWs(ws, text, voice, rate, pitch, volume) {
 
     ws.on('message', (data) => {
       try {
-        // Text frames (turn.start/response/turn.end/metadata) may arrive as
-        // TEXT opcode (string) or BINARY opcode (Buffer with NO length prefix).
-        // Audio frames are BINARY with a 2-byte big-endian header length,
-        // and the payload starts at header_length + 2 (edge-tts get_headers_and_data).
+        // Control frames come as text or unprefixed binary; audio is binary
+        // with a 2-byte header length, payload at hlen + 2.
         let str = null;
         if (!Buffer.isBuffer(data)) {
           str = String(data);
@@ -115,26 +111,24 @@ function synthOnWs(ws, text, voice, rate, pitch, volume) {
                 const body = data.slice(hlen + 2);
                 if (body.length) { audio.push(body); sawAudio = true; }
               }
-              // response/turn.start/metadata binary frames: nothing to do
+              // control frames carry nothing we need
               return;
             }
           }
-          // not a framed binary message -> decode whole buffer as text
+          // fall through: decode the whole buffer as text
           str = data.toString('utf8');
         } else {
           return;
         }
         if (str.includes('Path:turn.end')) {
-          // server sometimes ends the turn before flushing the last audio
-          // frame — wait one beat for stragglers before resolving
+          // the last audio frame can lag the turn end slightly
           setTimeout(() => fin(), sawAudio ? 400 : 0);
         }
         else if (str.includes('Path:turn.start') || str.includes('Path:response')) { /* keep going */ }
       } catch (e) { fin(e); }
     });
     ws.once('error', fin);
-    // close-after-turn is the normal end: if we already have audio, the
-    // straggler timer owns the finish — don't let close reject first.
+    // close after a turn that already produced audio is the normal end
     ws.once('close', () => { if (!done && !sawAudio) fin(new Error('tts socket closed early')); else if (!done) fin(); });
 
     (async () => {
@@ -154,8 +148,8 @@ function synthOnWs(ws, text, voice, rate, pitch, volume) {
   });
 }
 
-// Warm-socket pool keyed by voice+rate+pitch+volume. Sequential use per key;
-// a failed socket is discarded, next call reconnects.
+// One warm socket per voice config; a dead socket drops out of the pool
+// and the next call reconnects.
 const pool = new Map(); // key -> {ws, busy, queue:[]}
 function keyFor(voice, rate, pitch, volume) {
   return [voice, rate, pitch, volume].join('|');

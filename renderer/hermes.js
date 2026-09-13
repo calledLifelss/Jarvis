@@ -1,6 +1,5 @@
-// Hermes backend: WS JSON-RPC to local `hermes serve` (:9119).
-// Flow: GET / for session token -> ws /api/ws?token= -> session.create ->
-// prompt.submit {session_id, text} -> message.delta (stream) -> message.complete.
+// Hermes: WS JSON-RPC to local `hermes serve` (:9119). Token from GET /,
+// then session.create -> prompt.submit -> message.delta -> message.complete.
 // Model list: model.options {explicit_only} -> providers[].models.
 // Switch: config.set {session_id, key:'model', value:'<model> --provider <slug> --session'}.
 (function () {
