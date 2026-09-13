@@ -1,0 +1,89 @@
+{
+  "name": "jarvis-chatroom",
+  "version": "1.0.0",
+  "description": "Jarvis-style chatroom fronting Hermes and other agent backends",
+  "author": {
+    "name": "Lifeless",
+    "email": "hello@calledlifeless.eu.cc"
+  },
+  "homepage": "https://calledlifeless.eu.cc",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:linux": "electron-builder --linux AppImage rpm deb pacman --x64 --publish never",
+    "dist:win": "electron-builder --win nsis portable --x64 --publish never",
+    "release": "node release/build-all.js",
+    "release:winzip": "node release/make-winzip.js"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "electron": "40.10.2",
+    "electron-builder": "^26.0.12"
+  },
+  "allowScripts": {
+    "electron": true
+  },
+  "build": {
+    "appId": "eu.calledlifeless.jarvis",
+    "productName": "Jarvis",
+    "copyright": "Copyright © Lifeless",
+    "directories": {
+      "output": "release/out"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "updater.js",
+      "edge_tts_native.js",
+      "package.json",
+      "renderer/**/*",
+      "assets/**/*",
+      "build/icons/**/*",
+      "release/channel.json",
+      "!**/*.map"
+    ],
+    "extraMetadata": {},
+    "linux": {
+      "icon": "build/icons",
+      "category": "Utility",
+      "description": "Jarvis-style chatroom for AI agent backends",
+      "executableName": "jarvis",
+      "maintainer": "Lifeless <hello@calledlifeless.eu.cc>"
+    },
+    "win": {
+      "icon": "build/icons/icon.ico",
+      "executableName": "Jarvis",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Jarvis",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-portable.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-linux.${ext}"
+    },
+    "rpm": {
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "deb": {
+      "artifactName": "${productName}_${version}_amd64.${ext}",
+      "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libuuid1", "libsecret-1-0", "libasound2"]
+    },
+    "pacman": {
+      "artifactName": "${productName}-${version}-x86_64.${ext}"
+    }
+  }
+}

@@ -1,0 +1,124 @@
+/* Pack fonts: self-hosted woff2 in ../assets/fonts. Each pack declares its
+   dual stack (--sans for prose/labels, --mono for technical readouts).
+   Layer override data-layer-fonts="house" collapses back to the house stacks. */
+@font-face { font-family: "Press Start 2P"; src: url("../assets/fonts/press-start-2p-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "VT323"; src: url("../assets/fonts/vt323-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Orbitron"; src: url("../assets/fonts/orbitron-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("../assets/fonts/nunito-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Cinzel"; src: url("../assets/fonts/cinzel-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Special Elite"; src: url("../assets/fonts/special-elite-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("../assets/fonts/space-grotesk-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Share Tech Mono"; src: url("../assets/fonts/share-tech-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Rajdhani"; src: url("../assets/fonts/rajdhani-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Cormorant Garamond"; src: url("../assets/fonts/cormorant-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("../assets/fonts/inter-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("../assets/fonts/jetbrains-mono-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Chakra Petch"; src: url("../assets/fonts/chakra-petch-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Space Mono"; src: url("../assets/fonts/space-mono-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "IBM Plex Mono"; src: url("../assets/fonts/ibm-plex-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Bebas Neue"; src: url("../assets/fonts/bebas-neue-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Roboto Mono"; src: url("../assets/fonts/roboto-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Ubuntu Mono"; src: url("../assets/fonts/ubuntu-mono-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Courier Prime"; src: url("../assets/fonts/courier-prime-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Lora"; src: url("../assets/fonts/lora-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "PT Mono"; src: url("../assets/fonts/pt-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Fira Mono"; src: url("../assets/fonts/fira-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Silkscreen"; src: url("../assets/fonts/silkscreen-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "DotGothic16"; src: url("../assets/fonts/dotgothic16-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Cutive Mono"; src: url("../assets/fonts/cutive-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Overpass Mono"; src: url("../assets/fonts/overpass-mono-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Major Mono"; src: url("../assets/fonts/major-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Nova Mono"; src: url("../assets/fonts/nova-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Nanum Gothic Coding"; src: url("../assets/fonts/nanum-gothic-coding-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("../assets/fonts/oswald-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Red Hat Mono"; src: url("../assets/fonts/red-hat-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Quicksand"; src: url("../assets/fonts/quicksand-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Spline Sans Mono"; src: url("../assets/fonts/spline-sans-mono-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+
+:root, [data-theme="jarvis-dark"] {
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --r-sm: 3px; --r-md: 6px;
+}
+[data-theme="jarvis-blue"] {
+  --sans: "Chakra Petch", "Space Grotesk", system-ui, sans-serif;
+  --mono: "Space Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 3px; --r-md: 6px;
+}
+[data-theme="midnight"] {
+  --sans: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 4px; --r-md: 8px;
+}
+[data-theme="crimson"] {
+  --sans: "Bebas Neue", "Rajdhani", system-ui, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 2px; --r-md: 4px;
+}
+[data-theme="forest"] {
+  --sans: "Ubuntu Mono", ui-monospace, Menlo, monospace;
+  --mono: "Ubuntu Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 2px; --r-md: 4px;
+}
+[data-theme="sand"] {
+  --sans: "Quicksand", system-ui, sans-serif;
+  --mono: "Courier Prime", ui-monospace, Menlo, monospace;
+  --r-sm: 6px; --r-md: 10px;
+}
+[data-theme="light"] {
+  --sans: "Lora", Georgia, serif;
+  --mono: "PT Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 3px; --r-md: 6px;
+}
+[data-theme="violet"] {
+  --sans: "Rajdhani", "Space Grotesk", system-ui, sans-serif;
+  --mono: "Fira Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 5px; --r-md: 9px;
+}
+[data-theme="minecraft"] {
+  --sans: "Silkscreen", "VT323", system-ui, sans-serif;
+  --mono: "VT323", ui-monospace, Menlo, monospace;
+  --r-sm: 0px; --r-md: 0px;
+}
+[data-theme="sakura"] {
+  --sans: "DotGothic16", "Nunito", system-ui, sans-serif;
+  --mono: "Nanum Gothic Coding", ui-monospace, Menlo, monospace;
+  --r-sm: 6px; --r-md: 10px;
+}
+[data-theme="ocean"] {
+  --sans: "Oswald", "Rajdhani", system-ui, sans-serif;
+  --mono: "Overpass Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 3px; --r-md: 6px;
+}
+[data-theme="ember"] {
+  --sans: "Cinzel", Georgia, serif;
+  --mono: "Cutive Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 2px; --r-md: 4px;
+}
+[data-theme="royal"] {
+  --sans: "Cormorant Garamond", Georgia, serif;
+  --mono: "Major Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 2px; --r-md: 6px;
+}
+[data-theme="noir"] {
+  --sans: "Special Elite", Georgia, serif;
+  --mono: "Special Elite", ui-monospace, Menlo, monospace;
+  --r-sm: 0px; --r-md: 2px;
+}
+[data-theme="desert"] {
+  --sans: "Bebas Neue", "Oswald", system-ui, sans-serif;
+  --mono: "Nova Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 2px; --r-md: 4px;
+}
+[data-theme="ghost"] {
+  --sans: "Spline Sans Mono", "Inter", system-ui, sans-serif;
+  --mono: "Red Hat Mono", ui-monospace, Menlo, monospace;
+  --r-sm: 3px; --r-md: 6px;
+}
+/* layer override: house fonts on any pack */
+[data-layer-fonts="house"] {
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace !important;
+}
+/* layer override: house radius on any pack */
+[data-layer-shape="house"] { --r-sm: 3px !important; --r-md: 6px !important; }

@@ -1,0 +1,154 @@
+/* ============================================================
+   Theme catalog partial — generated for the 16-pack theme engine.
+   Each [data-theme="..."] block carries the FULL scene palette:
+   bg/panel/panel2/inset, text/muted/faint, accent/accent-ink/accent-dim,
+   border/hairline, user/user-border, agent wash, danger/ok,
+   plus the pack's dual font stacks (--sans/--mono) and radius voice.
+   Layer overrides (data-layer-*) let users switch icons/fonts/etc
+   back to the house look per layer without leaving the pack scene.
+   ============================================================ */
+
+/* ---------- 1 · jarvis-dark · the house console (default) ---------- */
+:root, [data-theme="jarvis-dark"] {
+  --bg: #0a0d12; --panel: #0e131c; --panel2: #141b27; --inset: #070a10;
+  --text: #d8dce3; --muted: #98a1b1; --faint: #616a7b;
+  --accent: #e5a021; --accent-ink: #171106; --accent-dim: #6e5416;
+  --border: #232c3d; --hairline: #161d29;
+  --user: #14100a; --user-border: #6e5416; --agent: transparent;
+  --danger: #e5484d; --ok: #57b883;
+}
+/* ---------- 2 · jarvis-blue · cold operations deck ---------- */
+[data-theme="jarvis-blue"] {
+  --bg: #050d14; --panel: #081523; --panel2: #0d2033; --inset: #03080e;
+  --text: #d5e8f2; --muted: #7fa0b5; --faint: #47606f;
+  --accent: #41c4f2; --accent-ink: #04121a; --accent-dim: #1c6a86;
+  --border: #14314a; --hairline: #0b1e30;
+  --user: #0a2233; --user-border: #1c6a86; --agent: transparent;
+  --danger: #f0565e; --ok: #43d69a;
+}
+/* ---------- 3 · midnight · deep indigo night ops ---------- */
+[data-theme="midnight"] {
+  --bg: #060810; --panel: #0b1020; --panel2: #121a33; --inset: #04060c;
+  --text: #d9e2fa; --muted: #8b98c2; --faint: #4c567e;
+  --accent: #8b95f5; --accent-ink: #0c0e22; --accent-dim: #454fae;
+  --border: #1c2547; --hairline: #121a36;
+  --user: #141b3d; --user-border: #454fae; --agent: transparent;
+  --danger: #f0566e; --ok: #43d69a;
+}
+/* ---------- 4 · crimson · red-alert engineering ---------- */
+[data-theme="crimson"] {
+  --bg: #120607; --panel: #1d0b0d; --panel2: #2b1013; --inset: #0c0405;
+  --text: #f4e2dd; --muted: #bd8f86; --faint: #73514b;
+  --accent: #ff6a3d; --accent-ink: #220a04; --accent-dim: #99341c;
+  --border: #40201d; --hairline: #2c1415;
+  --user: #3a1512; --user-border: #99341c; --agent: transparent;
+  --danger: #ff3b3b; --ok: #4fd08a;
+}
+/* ---------- 5 · forest · phosphor terminal ---------- */
+[data-theme="forest"] {
+  --bg: #050d08; --panel: #0a1410; --panel2: #11241a; --inset: #030705;
+  --text: #d9ecdd; --muted: #82a88d; --faint: #4a6a54;
+  --accent: #54e37f; --accent-ink: #03170b; --accent-dim: #207a43;
+  --border: #17291e; --hairline: #0e1d14;
+  --user: #0e2a1a; --user-border: #207a43; --agent: transparent;
+  --danger: #f0565e; --ok: #54e37f;
+}
+/* ---------- 6 · sand · warm paper console ---------- */
+[data-theme="sand"] {
+  --bg: #141009; --panel: #1f1811; --panel2: #2e2316; --inset: #0c0905;
+  --text: #f0e4cb; --muted: #b49d70; --faint: #706043;
+  --accent: #ffd166; --accent-ink: #241a05; --accent-dim: #96702a;
+  --border: #352913; --hairline: #241c0e;
+  --user: #33260f; --user-border: #96702a; --agent: transparent;
+  --danger: #ff6b5c; --ok: #7dd88a;
+}
+/* ---------- 7 · light · daylight paper ---------- */
+[data-theme="light"] {
+  --bg: #ece7da; --panel: #f5f1e6; --panel2: #e6dfcf; --inset: #fbf8f1;
+  --text: #23211b; --muted: #6d675a; --faint: #a39c8b;
+  --accent: #b07208; --accent-ink: #fff8e6; --accent-dim: #7a5206;
+  --border: #d3ccb9; --hairline: #e0dac9;
+  --user: #efe3c2; --user-border: #b07208; --agent: transparent;
+  --danger: #c93a3e; --ok: #2e8f66;
+}
+/* ---------- 8 · violet · ultraviolet lab ---------- */
+[data-theme="violet"] {
+  --bg: #0d0716; --panel: #160d26; --panel2: #221438; --inset: #080410;
+  --text: #eadcff; --muted: #a78ecd; --faint: #664c89;
+  --accent: #cb7fff; --accent-ink: #1c0733; --accent-dim: #7440ab;
+  --border: #2c1c48; --hairline: #1e1332;
+  --user: #261245; --user-border: #7440ab; --agent: transparent;
+  --danger: #ff5c7a; --ok: #4fe0a8;
+}
+/* ---------- 9 · minecraft · blocky overworld ---------- */
+[data-theme="minecraft"] {
+  --bg: #101408; --panel: #181d0d; --panel2: #232b12; --inset: #0a0c05;
+  --text: #e8f0d0; --muted: #a3b078; --faint: #5f6b3e;
+  --accent: #7fc93f; --accent-ink: #0e1c05; --accent-dim: #3f7a1e;
+  --border: #2e3a17; --hairline: #1e2610;
+  --user: #2a3312; --user-border: #7fc93f; --agent: transparent;
+  --danger: #e5484d; --ok: #7fc93f;
+}
+/* ---------- 10 · sakura · late-night tokyo terminal ---------- */
+[data-theme="sakura"] {
+  --bg: #120a10; --panel: #1b0f17; --panel2: #291624; --inset: #0c050a;
+  --text: #f2dce8; --muted: #bd8ba4; --faint: #73505f;
+  --accent: #ff8fbf; --accent-ink: #26060f; --accent-dim: #a34a70;
+  --border: #3d1e30; --hairline: #2a1421;
+  --user: #33182a; --user-border: #a34a70; --agent: transparent;
+  --danger: #ff5252; --ok: #6fe3a5;
+}
+/* ---------- 11 · ocean · abyssal trench console ---------- */
+[data-theme="ocean"] {
+  --bg: #030c12; --panel: #06141d; --panel2: #0b2230; --inset: #020608;
+  --text: #d2ecf3; --muted: #7ca7b5; --faint: #40626e;
+  --accent: #2fd4c4; --accent-ink: #02201c; --accent-dim: #147a70;
+  --border: #12303c; --hairline: #0a212b;
+  --user: #0a2530; --user-border: #147a70; --agent: transparent;
+  --danger: #ff6b6b; --ok: #2fd4c4;
+}
+/* ---------- 12 · ember · forge-room console ---------- */
+[data-theme="ember"] {
+  --bg: #100805; --panel: #190e07; --panel2: #261409; --inset: #0a0503;
+  --text: #f2ddc8; --muted: #bd9370; --faint: #73553f;
+  --accent: #ff9a3d; --accent-ink: #241004; --accent-dim: #96541c;
+  --border: #3a2110; --hairline: #28160b;
+  --user: #2e1a0c; --user-border: #96541c; --agent: transparent;
+  --danger: #ff4444; --ok: #8fd65e;
+}
+/* ---------- 13 · royal · velvet command room ---------- */
+[data-theme="royal"] {
+  --bg: #0d0812; --panel: #150c1d; --panel2: #211330; --inset: #080409;
+  --text: #e8dcf5; --muted: #a894c9; --faint: #615075;
+  --accent: #e8c34a; --accent-ink: #211503; --accent-dim: #8a6f1e;
+  --border: #2c1e40; --hairline: #1e142c;
+  --user: #241a35; --user-border: #8a6f1e; --agent: transparent;
+  --danger: #f0566e; --ok: #6fd6a0;
+}
+/* ---------- 14 · noir · black-and-white detective desk ---------- */
+[data-theme="noir"] {
+  --bg: #0a0a0a; --panel: #111111; --panel2: #1a1a1a; --inset: #050505;
+  --text: #e8e8e8; --muted: #a0a0a0; --faint: #5c5c5c;
+  --accent: #f0f0f0; --accent-ink: #0a0a0a; --accent-dim: #7a7a7a;
+  --border: #2a2a2a; --hairline: #1a1a1a;
+  --user: #1c1c1c; --user-border: #7a7a7a; --agent: transparent;
+  --danger: #e5484d; --ok: #b0b0b0;
+}
+/* ---------- 15 · desert · sun-bleached field kit ---------- */
+[data-theme="desert"] {
+  --bg: #171208; --panel: #211a0d; --panel2: #302613; --inset: #0e0a04;
+  --text: #f0e2c4; --muted: #b89d67; --faint: #6e5c38;
+  --accent: #e07b39; --accent-ink: #221004; --accent-dim: #8a4a1e;
+  --border: #382b14; --hairline: #261e0d;
+  --user: #2e2210; --user-border: #8a4a1e; --agent: transparent;
+  --danger: #d64545; --ok: #9fc65e;
+}
+/* ---------- 16 · ghost · pale signal station ---------- */
+[data-theme="ghost"] {
+  --bg: #dfe3e6; --panel: #eceff1; --panel2: #d5dbdf; --inset: #f7f9fa;
+  --text: #1d2329; --muted: #5c6a75; --faint: #93a0aa;
+  --accent: #0e7c86; --accent-ink: #f2fafa; --accent-dim: #0a565e;
+  --border: #c3ccd1; --hairline: #d2d9dd;
+  --user: #d3e7e9; --user-border: #0e7c86; --agent: transparent;
+  --danger: #c93a3e; --ok: #2e8f66;
+}

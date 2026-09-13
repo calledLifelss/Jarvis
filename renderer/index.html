@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="jarvis-dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jarvis Chatroom</title>
+<link rel="stylesheet" href="themes.css" />
+<link rel="stylesheet" href="pack-fonts.css" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="packs.css" />
+</head>
+<body>
+<!-- Work rail: fixed, grouped, always visible. No collapse gimmick. -->
+<nav id="rail" class="rail">
+  <div class="rail-head">
+    <img class="brand-logo" src="../assets/logo.png" alt="Jarvis" />
+    <div class="rail-title">
+      <span class="rail-word">Jarvis</span>
+      <span class="rail-sub">chatroom · <b id="backend-status">mock</b></span>
+    </div>
+  </div>
+
+  <div class="rail-group">
+    <div class="rail-grouphead" data-info="Your chats live here. New starts fresh, List shows the last 60 with message counts — click one to reopen it.">
+      <span>Session</span>
+      <button id="sess-toggle" class="rail-new" title="Start a new chat">New</button>
+    </div>
+    <div id="sess-menu" class="sess-inline hidden" role="menu">
+      <div class="sess-tools">
+        <button id="sess-new" class="btn sm">＋ New Session</button>
+      </div>
+      <div id="sess-list" class="sess-list"></div>
+    </div>
+    <div class="sess-meta"><span class="sess-count" id="sess-count">…</span> previous chats</div>
+  </div>
+
+  <div class="rail-group">
+    <div class="rail-grouphead" data-info="Which model answers in this chat. Switching applies per-chat (--session) so other chats keep theirs. The line below shows the live model."><span>Model</span></div>
+    <select id="model-select" title="Hermes model for this chat"><option>connecting…</option></select>
+    <div id="model-hint" class="hint"></div>
+  </div>
+
+  <div class="rail-group">
+    <div class="rail-grouphead" data-info="Backend opens connection settings. Schedules opens timed jobs. Voice toggles spoken replies. Orb dock shrinks Jarvis to a corner bubble. Settings holds everything else."><span>Operate</span></div>
+    <button id="rail-backend" class="rail-row" title="Backend settings">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/><path d="M4 10h-2M4 14h-2M22 10h-2M22 14h-2M10 4V2M14 4V2M10 22v-2M14 22v-2"/></svg>
+      <span class="rail-rowlabel">Backend</span>
+    </button>
+    <button id="rail-sessions" class="rail-row" title="Chat sessions">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="rail-rowlabel">Sessions</span>
+    </button>
+    <button id="rail-cron" class="rail-row" title="Scheduled jobs">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 13.5"/></svg>
+      <span class="rail-rowlabel">Schedules</span>
+    </button>
+    <button id="btn-sound" class="rail-row on" title="Toggle agent voice">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path class="snd-waves" d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path class="snd-waves" d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      <span class="rail-rowlabel">Voice</span>
+    </button>
+    <button id="btn-dock" class="rail-row" title="Dock orb to screen corner">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M5 3v4H1M19 3v4h4M5 21v-4H1M19 21v-4h4"/></svg>
+      <span class="rail-rowlabel">Orb dock</span>
+    </button>
+    <button id="btn-settings" class="rail-row" title="Settings">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="rail-rowlabel">Settings</span>
+    </button>
+  </div>
+
+  <div class="rail-foot">hermes :9119 · <span id="rail-conn">dialing</span></div>
+</nav>
+<!-- legacy veil/nub hooks retained for JS compat; permanently inert -->
+<div id="rail-veil" class="gone"></div>
+<button id="rail-toggle" class="gone" tabindex="-1" aria-hidden="true"></button>
+
+<main class="layout">
+  <section class="chat-panel">
+    <!-- State strip: orb as instrument, left-aligned. Not a stage. -->
+    <header class="chat-orb-layer" id="orb-layer">
+      <div class="orb-wrap" id="orb-wrap">
+        <canvas id="orb" width="300" height="300"></canvas>
+        <div class="orb-core-text" id="orb-core-text" data-text="Idle"></div>
+      </div>
+      <div class="orb-meta">
+        <div class="orb-sub" id="orb-sub">Connecting…</div>
+        <div class="orb-model" id="orb-model">model — <b>…</b></div>
+        <div class="stage-hints" id="stage-hints">
+          <button data-q="Search the web for the latest Electron release notes">latest Electron news</button>
+          <button data-q="Write a haiku about a holographic orb">haiku about the orb</button>
+          <button data-q="List the files in /tmp and tell me the count">peek at /tmp</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- legacy dropdown hooks retained for JS compat; sessions live in the rail -->
+    <div id="sess-veil" class="gone"></div>
+
+    <div id="messages" class="messages" aria-live="polite"></div>
+
+    <div id="attach-chips" class="attach-chips"></div>
+
+    <div id="rec-pill" class="rec-pill hidden">
+      <span class="rec-dot"></span>
+      <canvas id="micbars" width="220" height="36"></canvas>
+      <span id="rec-time" class="rec-time">0:00</span>
+      <button id="rec-cancel" class="btn ghost sm">✕</button>
+      <button id="rec-send" class="btn primary sm">✓ Transcribe</button>
+    </div>
+
+    <footer class="composer">
+      <button id="btn-clip" class="icon-btn" title="Attach files / images">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <input type="file" id="file-input" multiple hidden />
+      <div class="slash-wrap">
+        <div id="slash-menu" class="slash-menu hidden"></div>
+        <input id="chat-input" type="text" placeholder="Message Jarvis…  ( / for commands )" autocomplete="off" />
+      </div>
+      <button id="btn-mic" class="icon-btn" title="Push to talk">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <button id="btn-send" class="btn primary" title="Send">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+      <button id="btn-schedule" class="btn ghost hidden" title="Queue this message to send when the agent finishes">Schedule</button>
+    </footer>
+  </section>
+</main>
+
+<!-- Settings sheet -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <strong>Settings</strong>
+      <button id="settings-close" class="btn ghost sm">✕</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="voice">Voice</button>
+      <button class="tab" data-tab="themes">Appearance</button>
+      <button class="tab" data-tab="backends">Backends</button>
+      <button class="tab" data-tab="providers">Providers</button>
+      <button class="tab" data-tab="skills">Skills</button>
+      <button class="tab" data-tab="cron">Schedules</button>
+      <button class="tab" data-tab="updates">Updates</button>
+    </div>
+    <div class="tab-body" id="tab-voice">
+      <h4>Speech → Text (ears)</h4>
+      <label>Provider
+        <select id="stt-provider">
+          <option value="cloud-stt" selected>Cloud transcription</option>
+          <option value="local" disabled>Local Whisper (later)</option>
+        </select>
+      </label>
+      <label>Transcription API key
+        <input id="stt-key" type="password" placeholder="stored in OS keyring — never in source" />
+      </label>
+      <div class="row">
+        <button id="stt-test" class="btn ghost sm">Test key</button>
+        <span id="stt-test-result" class="hint"></span>
+      </div>
+      <h4>Text → Speech (voice)</h4>
+      <label>Provider
+        <select id="tts-provider">
+          <option value="edge" selected>Edge TTS (free)</option>
+          <option value="elevenlabs" disabled>ElevenLabs (later)</option>
+          <option value="piper" disabled>Piper offline (later)</option>
+        </select>
+      </label>
+      <label data-info="Auto detects Persian script per sentence and switches voices mid-reply. Force English or Persian to lock one voice for everything.">Language mode
+        <select id="tts-langmode">
+          <option value="auto" selected>Auto — English + Persian</option>
+          <option value="en">English only</option>
+          <option value="fa">Persian only</option>
+        </select>
+      </label>
+      <label>English voice
+        <select id="tts-voice"></select>
+      </label>
+      <label>Persian voice
+        <select id="tts-voice-fa"></select>
+      </label>
+      <div class="prov-grid2">
+        <label>Speed
+          <select id="tts-rate">
+            <option value="-20%">Slow −20%</option>
+            <option value="-10%">−10%</option>
+            <option value="+0%">Normal</option>
+            <option value="+10%" selected>+10%</option>
+            <option value="+25%">Fast +25%</option>
+            <option value="+50%">Very fast +50%</option>
+          </select>
+        </label>
+        <label>Pitch
+          <select id="tts-pitch">
+            <option value="-5Hz">Deeper −5Hz</option>
+            <option value="-2Hz">−2Hz</option>
+            <option value="+0Hz" selected>Normal</option>
+            <option value="+2Hz">+2Hz</option>
+            <option value="+5Hz">Higher +5Hz</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="tts-test" class="btn ghost sm">Test voice</button>
+        <button id="tts-test-fa" class="btn ghost sm">تست فارسی</button>
+      </div>
+      <p class="hint">Transcription is ears-only (STT). Voice-out is Edge TTS: free, no key, ~300 neural voices.</p>
+    </div>
+    <div class="tab-body hidden" id="tab-themes">
+      <h4 data-info="16 full scenes — palette, type, icons, orb story. Each card's Activate button switches the whole app; the four dropdowns pick which layers follow the pack and which stay house.">Theme packs <span class="prov-countpill" id="pack-count">…</span></h4>
+      <p class="hint">Full scenes — palette, type, icons, orb story. Per-pack dropdowns pick which layers follow the pack and which stay house.</p>
+      <div id="pack-gallery" class="pack-gallery"></div>
+    </div>
+    <div class="tab-body hidden" id="tab-backends">
+      <h4>Agent backends</h4>
+      <div class="backend-row"><span>Mock (built-in)</span><span class="status-pill">ready</span></div>
+      <div class="backend-row"><span>Hermes serve (localhost:9119)</span><span id="hermes-status" class="status-pill">checking…</span></div>
+      <div class="backend-row"><span>Claude Code</span><span class="status-pill dim">v2</span></div>
+      <label>Active backend
+        <select id="backend-select">
+          <option value="mock" selected>Mock</option>
+          <option value="hermes">Hermes</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="hermes-reconnect" class="btn ghost sm">↻ Reconnect</button>
+        <button id="hermes-newchat" class="btn ghost sm">＋ New chat</button>
+      </div>
+      <p class="hint">Live WS JSON-RPC to hermes serve :9119. Model switch is per-chat (--session).</p>
+    </div>
+    <div class="tab-body hidden" id="tab-providers">
+      <h4 data-info="Which API provider each backend talks to. Pick one and the model picker scopes to its models instantly. Keys live in the ~/.hermes/keyman vault — the app only ever sees masked versions.">Backend → Provider mapping</h4>
+      <div id="prov-mapping"></div>
+      <h4>Providers <span class="prov-countpill" id="prov-count">…</span></h4>
+      <div class="row">
+        <button id="prov-refresh" class="btn ghost sm">↻ Refresh</button>
+        <button id="prov-new" class="btn ghost sm">＋ Add your own Provider</button>
+      </div>
+      <div id="prov-list" class="prov-list"></div>
+      <h4 id="prov-ed-title">Add your own Provider</h4>
+      <input id="prov-ed-id" type="hidden" />
+      <label>Name<input id="prov-ed-name" type="text" placeholder="My Provider" /></label>
+      <label>Base URL<input id="prov-ed-url" type="text" placeholder="https://api.example.com/v1" /></label>
+      <div class="prov-grid2">
+        <label>API mode
+          <select id="prov-ed-mode">
+            <option value="chat_completions">chat_completions</option>
+            <option value="anthropic_messages">anthropic_messages</option>
+            <option value="codex_responses">codex_responses</option>
+          </select>
+        </label>
+        <label>Default model<input id="prov-ed-model" type="text" placeholder="gpt-4o-mini" /></label>
+      </div>
+      <label>Models (one per line)<textarea id="prov-ed-models" rows="4" placeholder="gpt-4o-mini&#10;gpt-4o"></textarea></label>
+      <div class="prov-grid2">
+        <label>Max output tokens<input id="prov-ed-tokens" type="text" placeholder="4096" /></label>
+        <label>Context length<input id="prov-ed-ctx" type="text" placeholder="128000" /></label>
+      </div>
+      <label class="prov-check"><input id="prov-ed-discover" type="checkbox" /> Discover models automatically</label>
+      <label class="prov-check"><input id="prov-ed-enabled" type="checkbox" checked /> Enabled</label>
+      <label>API key<input id="prov-ed-key" type="password" placeholder="paste API key…" autocomplete="new-password" /></label>
+      <label>Multi-key pool (one per line, failover)<textarea id="prov-ed-multikeys" rows="2" placeholder="optional — extra keys for rotation"></textarea></label>
+      <div class="row">
+        <button id="prov-save" class="btn primary sm">Save provider</button>
+        <button id="prov-delete" class="btn ghost sm">Delete</button>
+      </div>
+      <div class="row">
+        <button id="prov-test" class="btn ghost sm">⚡ Live test</button>
+        <button id="prov-models" class="btn ghost sm">Fetch models</button>
+      </div>
+      <div id="prov-test-out" class="prov-test-out"></div>
+      <div id="prov-toast" class="prov-toast"></div>
+      <p class="hint">Keys live in ~/.hermes/keyman vault (never in config). Same engine as your providers-manager.</p>
+    </div>
+    <div class="tab-body hidden" id="tab-skills">
+      <h4>Installed skills <span class="prov-countpill" id="skills-count">…</span></h4>
+      <div class="row">
+        <button id="skills-refresh" class="btn ghost sm">↻ Refresh</button>
+        <button id="skills-check" class="btn ghost sm">Check updates</button>
+        <button id="skills-update" class="btn ghost sm">Update all</button>
+        <button id="skills-audit" class="btn ghost sm">Re-scan</button>
+      </div>
+      <label>Filter<input id="skills-filter" type="text" placeholder="filter installed…" /></label>
+      <div id="skills-list" class="prov-list"></div>
+      <h4 data-info="The public skill hub. Search, click a card to stage its identifier, then Install — it lands in your skills dirs like a `hermes skills` install.">Skill hub</h4>
+      <div class="row">
+        <input id="skills-hub-q" type="text" placeholder="search hub, or identifier to install…" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="skills-hub-search" class="btn ghost sm">Search hub</button>
+        <button id="skills-hub-install" class="btn primary sm">Install</button>
+        <button id="skills-hub-uninstall" class="btn ghost sm">Remove selected</button>
+      </div>
+      <div id="skills-detail" class="prov-test-out" style="max-height:220px"></div>
+      <div id="skills-toast" class="prov-toast"></div>
+      <p class="hint">Same source as `hermes skills` — installs land in your skills dirs.</p>
+    </div>
+    <div class="tab-body hidden" id="tab-cron">
+      <h4 data-info="Jobs that fire on the gateway ticker — same store as `hermes cron`. Select one for Pause / Resume / Run now / Remove, or scroll down to create a new timed job.">Scheduled jobs <span class="prov-countpill" id="cron-count">…</span></h4>
+      <div id="cron-status-line" class="hint">scheduler: checking…</div>
+      <div class="row">
+        <button id="cron-refresh" class="btn ghost sm">↻ Refresh</button>
+        <button id="cron-runs" class="btn ghost sm">Run history</button>
+        <button id="cron-doctor" class="btn ghost sm">Health check</button>
+      </div>
+      <div id="cron-list" class="prov-list"></div>
+      <div id="cron-sel-label" class="hint">No job selected.</div>
+      <div class="row">
+        <button id="cron-pause" class="btn ghost sm">Pause</button>
+        <button id="cron-resume" class="btn ghost sm">Resume</button>
+        <button id="cron-run" class="btn ghost sm">Run now</button>
+        <button id="cron-remove" class="btn ghost sm">Remove</button>
+      </div>
+      <h4>New job</h4>
+      <div class="prov-grid2">
+        <label>Schedule<input id="cron-schedule" type="text" placeholder="every 2h · 0 9 * * * · 30m" /></label>
+        <label>Name<input id="cron-name" type="text" placeholder="morning brief" /></label>
+      </div>
+      <label>Prompt / task<textarea id="cron-prompt" rows="3" placeholder="self-contained instruction for the agent…"></textarea></label>
+      <div class="prov-grid2">
+        <label>Deliver to<input id="cron-deliver" type="text" placeholder="local · telegram · origin" /></label>
+        <label>Workdir<input id="cron-workdir" type="text" placeholder="/abs/path (optional)" /></label>
+      </div>
+      <div class="prov-grid2">
+        <label>Model override<input id="cron-model" type="text" placeholder="(gateway default)" /></label>
+        <label>Provider<input id="cron-provider" type="text" placeholder="(paired with model)" /></label>
+      </div>
+      <label>Script path (under ~/.hermes/scripts/)<input id="cron-script" type="text" placeholder="optional — stdout feeds the prompt" /></label>
+      <label class="prov-check"><input id="cron-noagent" type="checkbox" /> No agent — run script only, deliver stdout</label>
+      <div class="row">
+        <button id="cron-create" class="btn primary sm">Create job</button>
+      </div>
+      <div id="cron-detail" class="prov-test-out" style="max-height:220px"></div>
+      <div id="cron-toast" class="prov-toast"></div>
+      <p class="hint">Same store as `hermes cron` — jobs fire on the gateway ticker.</p>
+    </div>
+    <div class="tab-body hidden" id="tab-updates">
+      <h4 data-info="Checks your release channel for a newer Jarvis build. Press Check, then Update when one appears — the app downloads it and installs on restart.">App updates <span class="prov-countpill" id="upd-pill">…</span></h4>
+      <div class="backend-row"><span>Installed</span><span class="status-pill" id="upd-current">…</span></div>
+      <div class="backend-row"><span>Latest release</span><span class="status-pill dim" id="upd-latest">unknown</span></div>
+      <div class="row">
+        <button id="upd-check" class="btn ghost sm">↻ Check for updates</button>
+        <button id="upd-install" class="btn primary sm" disabled>⬇ Update</button>
+      </div>
+      <div id="upd-note" class="hint">Checks your update channel (set at build time).</div>
+      <div id="upd-toast" class="prov-toast"></div>
+    </div>
+  </div>
+</div>
+
+<script src="orb.js"></script>
+<script src="hermes.js"></script>
+<script src="edge-tts.js"></script>
+<script src="activity.js"></script>
+<script src="slash.js"></script>
+<script src="providers.js"></script>
+<script src="packs.js"></script>
+<script src="info-dots.js"></script>
+<script src="skills.js"></script>
+<script src="cron.js"></script>
+<script src="updates.js"></script>
+<script src="voice.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
