@@ -113,12 +113,14 @@ function pickAsset(assets, latestVersion, currentVersion) {
   const lat = String(latestVersion || '').replace(/^v/, '').toLowerCase();
   // version-boundary match: "1.0.1" must not match inside "1.0.12"
   const hasVer = (n, v) => v && new RegExp(`(^|[^0-9.])${v.replace(/\./g, '\\.')}([^0-9.]|$)`).test(n);
+  // Deltas are the primary (~2MB). `-patch.zip` is still accepted so older
+  // 1.0.4-era builds written before the rename keep working.
+  const isDelta = (n) => n.includes('-delta.zip') || n.includes('-patch.zip');
   const patchIdx = names.findIndex((n) =>
-    n.includes('-patch.zip') && hasVer(n, lat) && (hasVer(n, cur) || n.includes('any')));
+    isDelta(n) && hasVer(n, lat) && (hasVer(n, cur) || n.includes('any')));
   if (cur && lat && patchIdx >= 0) return { ...assets[patchIdx], isPatch: true };
   if (lat) {
-    const uni = names.findIndex((n) =>
-      n.includes('-patch.zip') && hasVer(n, lat) && !/-to-/.test(n));
+    const uni = names.findIndex((n) => isDelta(n) && hasVer(n, lat) && !/-to-/.test(n));
     if (uni >= 0 && cmpVer(lat, cur) > 0) return { ...assets[uni], isPatch: true };
   }
   const plat = process.platform;
@@ -309,6 +311,8 @@ function applyPatch(zipPath) {
 // Where does the running app's asar live? Packaged apps set app.getAppPath()
 // to .../resources/app.asar. Dev runs return the source dir (no asar).
 function findInstalledAsar() {
+  // test hook: lets the patch test point at a throwaway asar
+  if (module.exports.__testAsarPath) return module.exports.__testAsarPath;
   try {
     // updater runs in main; app may not be imported here — resolve lazily
     const electron = require('electron');
