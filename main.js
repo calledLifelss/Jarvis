@@ -269,7 +269,7 @@ app.whenReady().then(() => {
       const file = a.file;
       if (!file || !fs.existsSync(file)) throw new Error('downloaded file missing — download first');
       const isPatch = !!(updCache && updCache.pick && updCache.pick.isPatch);
-      return updater.install(file, { isPatch });
+      return updater.install(file, { isPatch, version: updCache && updCache.rel && updCache.rel.latest });
     }
     throw new Error('updates op not allowed: ' + op);
   });

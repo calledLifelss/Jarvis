@@ -15,6 +15,38 @@ try {
   CHANNEL = require(path.join(__dirname, 'release', 'channel.json'));
 } catch { CHANNEL = null; }
 
+// Electron's fs wrapper hijacks EVERY path ending in `.asar` and reads it as
+// "file X inside that archive" — so a plain readFileSync on a real app.asar
+// throws ENOENT, statSync reports size 0, and copyFileSync fails both ways.
+// Every raw byte-level op on an .asar path must run with process.noAsar set.
+// (Plain-node unit tests never see this: fs is unwrapped there, so they pass
+// green while the shipped app fails. Prove .asar ops under real Electron.)
+function noAsar(fn) {
+  const prev = process.noAsar;
+  process.noAsar = true;
+  try { return fn(); } finally { process.noAsar = prev; }
+}
+
+// an AppImage's app.asar sits in a read-only squashfs mount (EROFS): the
+// ~2MB patch path can never write there, so never pick one for it.
+function runningAppImage(platform = process.platform, env = process.env) {
+  return platform === 'linux' && !!env.APPIMAGE;
+}
+
+// A Windows portable exe runs from a temp dir it RE-EXTRACTS from the .exe on
+// every launch, wiping any swapped app.asar. A patch there would report
+// success and silently revert on the next start, so never pick one either.
+function runningPortable(platform = process.platform, env = process.env) {
+  return platform === 'win32' && !!(env.PORTABLE_EXECUTABLE_FILE || env.PORTABLE_EXECUTABLE_DIR);
+}
+
+// true when an app.asar swap cannot persist for this install shape.
+// Platform/env are parameters (not read directly) so every shape is testable
+// on any host — see test/updater-electron-asar.test.js.
+function patchCannotPersist(platform = process.platform, env = process.env) {
+  return runningAppImage(platform, env) || runningPortable(platform, env);
+}
+
 function cmpVer(a, b) {
   const pa = String(a || '0').replace(/^v/, '').split('.').map((x) => parseInt(x, 10) || 0);
   const pb = String(b || '0').replace(/^v/, '').split('.').map((x) => parseInt(x, 10) || 0);
@@ -102,7 +134,7 @@ async function check(currentVersion) {
   };
 }
 
-function pickAsset(assets, latestVersion, currentVersion) {
+function pickAsset(assets, latestVersion, currentVersion, host = {}) {
   // Patches first: `Jarvis-<from>-to-<to>-patch.zip` (~2MB) replaces just
   // app.asar (whole-file swap, so any older install can jump straight to
   // latest). Match order: exact from-version patch, then a target-only
@@ -116,19 +148,24 @@ function pickAsset(assets, latestVersion, currentVersion) {
   // Deltas are the primary (~2MB). `-patch.zip` is still accepted so older
   // 1.0.4-era builds written before the rename keep working.
   const isDelta = (n) => n.includes('-delta.zip') || n.includes('-patch.zip');
-  const patchIdx = names.findIndex((n) =>
-    isDelta(n) && hasVer(n, lat) && (hasVer(n, cur) || n.includes('any')));
+  // AppImage: skip the delta — its app.asar is inside a read-only squashfs
+  // mount, so a patch would download and then fail to install. Windows
+  // portable: same, it re-extracts on launch and would revert the swap. Both
+  // fall through to the full installer, which handles those shapes properly.
+  const allowPatch = !patchCannotPersist(host.platform, host.env);
+  const patchIdx = allowPatch ? names.findIndex((n) =>
+    isDelta(n) && hasVer(n, lat) && (hasVer(n, cur) || n.includes('any'))) : -1;
   if (cur && lat && patchIdx >= 0) return { ...assets[patchIdx], isPatch: true };
-  if (lat) {
+  if (lat && allowPatch) {
     const uni = names.findIndex((n) => isDelta(n) && hasVer(n, lat) && !/-to-/.test(n));
     if (uni >= 0 && cmpVer(lat, cur) > 0) return { ...assets[uni], isPatch: true };
   }
-  const plat = process.platform;
+  const plat = host.platform || process.platform;
   if (plat === 'win32') return find('.exe') || find('.zip') || null;
   if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip') || null;
   // linux: match the distro's native package, AppImage as fallback
   try {
-    const osrel = fs.readFileSync('/etc/os-release', 'utf8');
+    const osrel = host.osRelease != null ? host.osRelease : fs.readFileSync('/etc/os-release', 'utf8');
     if (/ID_LIKE=.*(debian|ubuntu)|ID=(debian|ubuntu|linuxmint|pop)/.test(osrel)) return find('.deb') || find('.appimage') || null;
     if (/ID_LIKE=.*(arch)|ID=(arch|cachyos|endeavouros|manjaro)/.test(osrel)) return find('.pkg.tar.') || find('.appimage') || null;
     if (/ID_LIKE=.*(rhel|fedora|suse)|ID=(fedora|rhel|opensuse)/.test(osrel)) return find('.rpm') || find('.appimage') || null;
@@ -253,6 +290,42 @@ function install(filePath, opts = {}) {
       return;
     }
     if (lower.endsWith('.appimage') || lower.endsWith('.zip')) {
+      // Portable files: the updater can't swap itself. If we were launched
+      // FROM an AppImage, replace that file in place (via pkexec when it sits
+      // somewhere we can't write) and say exactly what to run next.
+      if (lower.endsWith('.appimage') && runningAppImage()) {
+        const self = process.env.APPIMAGE;
+        try {
+          fs.chmodSync(filePath, 0o755);
+          let how = 'replaced';
+          try {
+            fs.copyFileSync(filePath, self);
+          } catch {
+            const { spawnSync } = require('child_process');
+            const r = spawnSync('pkexec', ['cp', filePath, self], { stdio: 'ignore' });
+            if (r.status !== 0) {
+              resolve({
+                action: 'manual',
+                detail: `New AppImage is at ${filePath} — replace ${self} with it and reopen (needs root, prompt cancelled).`,
+              });
+              return;
+            }
+            how = 'replaced (with root)';
+          }
+          if (shaFile(self) !== shaFile(filePath)) {
+            reject(new Error('AppImage replace failed verification'));
+            return;
+          }
+          resolve({
+            action: 'relaunch',
+            detail: `v${opts.version || ''} ${how} at ${self} — close Jarvis and run it again to use the new build.`.replace('v ', 'v'),
+          });
+          return;
+        } catch (e) {
+          resolve({ action: 'manual', detail: `New AppImage is at ${filePath} — replace ${self} with it and reopen (${e.message}).` });
+          return;
+        }
+      }
       resolve({ action: 'replace+relaunch', file: filePath, detail: 'Downloaded to ' + filePath });
       return;
     }
@@ -261,7 +334,46 @@ function install(filePath, opts = {}) {
 }
 
 function shaFile(f) {
-  return crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+  // must bypass the asar wrapper: reading a real app.asar as a file needs noAsar
+  return noAsar(() => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex'));
+}
+
+// Minimal pure-Node zip reader. Previously this shelled out to `unzip`,
+// which does not exist on Windows — every patch there failed with ENOENT.
+// Reads the central directory and inflates method 0 (store) / 8 (deflate).
+function readZip(zipPath, names) {
+  const buf = fs.readFileSync(zipPath);
+  const EOCD = 0x06054b50;
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0 && i >= buf.length - 66560; i--) {
+    if (buf.readUInt32LE(i) === EOCD) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not a zip file');
+  const count = buf.readUInt16LE(eocd + 10);
+  let p = buf.readUInt32LE(eocd + 16);
+  const out = {};
+  const zlib = require('zlib');
+  for (let i = 0; i < count; i++) {
+    if (buf.readUInt32LE(p) !== 0x02014b50) throw new Error('corrupt zip central directory');
+    const method = buf.readUInt16LE(p + 10);
+    const compSize = buf.readUInt32LE(p + 20);
+    const nameLen = buf.readUInt16LE(p + 28);
+    const extraLen = buf.readUInt16LE(p + 30);
+    const commentLen = buf.readUInt16LE(p + 32);
+    const localOff = buf.readUInt32LE(p + 42);
+    const name = buf.toString('utf8', p + 46, p + 46 + nameLen);
+    p += 46 + nameLen + extraLen + commentLen;
+    if (names && !names.includes(name)) continue;
+    if (buf.readUInt32LE(localOff) !== 0x04034b50) throw new Error('corrupt zip local header');
+    const lNameLen = buf.readUInt16LE(localOff + 26);
+    const lExtraLen = buf.readUInt16LE(localOff + 28);
+    const start = localOff + 30 + lNameLen + lExtraLen;
+    const raw = buf.subarray(start, start + compSize);
+    if (method === 0) out[name] = Buffer.from(raw);
+    else if (method === 8) out[name] = zlib.inflateRawSync(raw);
+    else throw new Error('unsupported zip compression method ' + method);
+  }
+  return out;
 }
 
 // Patch flow: unzip -> verify asar hash -> backup current asar -> swap.
@@ -271,40 +383,48 @@ function applyPatch(zipPath) {
     let tmp;
     try {
       tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'jarvis-patch-'));
-      const { execFileSync } = require('child_process');
-      execFileSync('unzip', ['-oq', zipPath, '-d', tmp]);
-      const meta = JSON.parse(fs.readFileSync(path.join(tmp, 'patch.json'), 'utf8'));
+      const files = readZip(zipPath, ['patch.json', 'app.asar']);
+      if (!files['patch.json'] || !files['app.asar']) throw new Error('patch zip is missing patch.json/app.asar');
+      const meta = JSON.parse(files['patch.json'].toString('utf8'));
       if (meta.app !== 'jarvis' || !meta.version || !meta.asarSha256) {
         throw new Error('patch manifest invalid');
       }
       const newAsar = path.join(tmp, 'app.asar');
+      // this path ends in .asar, so the wrapper must be off for the write too
+      noAsar(() => fs.writeFileSync(newAsar, files['app.asar']));
       if (shaFile(newAsar) !== meta.asarSha256) throw new Error('patch asar hash mismatch — redownload');
       const target = findInstalledAsar();
       if (!target) {
         throw new Error('cannot find installed app.asar (portable zip? apply manually: replace resources/app.asar)');
       }
+      // Every byte-level op on the .asar paths below must bypass Electron's
+      // asar fs wrapper, which otherwise treats them as paths INSIDE an asar
+      // and throws ENOENT (this is what made 1.0.4 patches fail to install).
       const bak = target + '.bak-' + Date.now();
-      fs.copyFileSync(target, bak);
-      try {
-        fs.copyFileSync(newAsar, target);
-      } catch (e) {
-        // likely permissions (native package owned by root) — retry elevated
-        const { spawnSync } = require('child_process');
-        const r = spawnSync('pkexec', ['cp', newAsar, target], { stdio: 'ignore' });
-        if (r.status !== 0) {
-          fs.copyFileSync(bak, target); // roll back
-          throw new Error('needs root to patch ' + target + ' (cancelled?)');
+      noAsar(() => {
+        fs.copyFileSync(target, bak);
+        try {
+          fs.copyFileSync(newAsar, target);
+        } catch {
+          // likely permissions (read-only AppImage mount, or a native package
+          // owned by root) — retry elevated
+          const { spawnSync } = require('child_process');
+          const r = spawnSync('pkexec', ['cp', newAsar, target], { stdio: 'ignore' });
+          if (r.status !== 0) {
+            fs.copyFileSync(bak, target); // roll back
+            throw new Error('needs root to patch ' + target + ' (cancelled or read-only filesystem)');
+          }
         }
-      }
+      });
       // sanity: patched asar hashes the same
       if (shaFile(target) !== meta.asarSha256) {
-        try { fs.copyFileSync(bak, target); } catch {}
+        try { noAsar(() => fs.copyFileSync(bak, target)); } catch {}
         throw new Error('patched file failed verification — rolled back');
       }
-      try { fs.unlinkSync(bak); } catch {}
+      try { noAsar(() => fs.unlinkSync(bak)); } catch {}
       resolve({ action: 'relaunch', detail: `Patched to v${meta.version} (~2MB) — restart Jarvis.` });
     } catch (e) { reject(e); }
-    finally { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} }
+    finally { try { noAsar(() => fs.rmSync(tmp, { recursive: true, force: true })); } catch {} }
   });
 }
 
@@ -318,8 +438,8 @@ function findInstalledAsar() {
     const electron = require('electron');
     const app = electron.app || (electron.remote && electron.remote.app);
     const p = app && app.getAppPath && app.getAppPath();
-    if (p && p.endsWith('.asar') && fs.existsSync(p)) return p;
-    if (p && fs.existsSync(path.join(p, 'resources', 'app.asar'))) {
+    if (p && p.endsWith('.asar') && noAsar(() => fs.existsSync(p))) return p;
+    if (p && noAsar(() => fs.existsSync(path.join(p, 'resources', 'app.asar')))) {
       return path.join(p, 'resources', 'app.asar');
     }
   } catch {}
@@ -346,8 +466,8 @@ function findInstalledAsar() {
       cands.push(path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'resources', 'app.asar'));
     }
   }
-  for (const c of cands) { try { if (fs.existsSync(c)) return c; } catch {} }
+  for (const c of cands) { try { if (noAsar(() => fs.existsSync(c))) return c; } catch {} }
   return null;
 }
 
-module.exports = { check, pickAsset, download, install, cmpVer };
+module.exports = { check, pickAsset, download, install, cmpVer, noAsar };
