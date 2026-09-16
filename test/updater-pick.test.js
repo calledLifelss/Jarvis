@@ -51,4 +51,33 @@ t('cmp 1.0.10 > 1.0.2', u.cmpVer('1.0.10', '1.0.2'), 1);
 t('cmp equal', u.cmpVer('1.0.2', '1.0.2'), 0);
 t('cmp older', u.cmpVer('1.0.1', '1.0.2'), -1);
 
+// Windows install shapes: portable picks the portable exe, an NSIS install
+// picks the Setup exe, and only the installed shape may take a delta.
+const winSetup = A('Jarvis-Setup-1.0.6.exe');
+const winPortable = A('Jarvis-1.0.6-win-portable.exe');
+
+t('installed windows build picks the NSIS Setup exe',
+  u.pickAsset([winPortable, winSetup], '1.0.6', '1.0.5', { platform: 'win32', env: {} }).name,
+  'Jarvis-Setup-1.0.6.exe');
+
+t('portable windows build picks the portable exe',
+  u.pickAsset([winSetup, winPortable], '1.0.6', '1.0.5',
+    { platform: 'win32', env: { PORTABLE_EXECUTABLE_FILE: 'C:\\Jarvis-1.0.5-win-portable.exe' } }).name,
+  'Jarvis-1.0.6-win-portable.exe');
+
+t('installed windows build is allowed a delta',
+  u.pickAsset([A('Jarvis-1.0.5-to-1.0.6-delta.zip'), winSetup], '1.0.6', '1.0.5',
+    { platform: 'win32', env: {} }).isPatch,
+  true);
+
+t('portable windows build is NOT allowed a delta',
+  u.pickAsset([A('Jarvis-1.0.5-to-1.0.6-delta.zip'), winPortable], '1.0.6', '1.0.5',
+    { platform: 'win32', env: { PORTABLE_EXECUTABLE_DIR: 'C:\\j' } }).name,
+  'Jarvis-1.0.6-win-portable.exe');
+
+t('patchCannotPersist: installed win32 is false',
+  u.patchCannotPersist('win32', {}), false);
+t('patchCannotPersist: portable win32 is true',
+  u.patchCannotPersist('win32', { PORTABLE_EXECUTABLE_DIR: 'C:\\j' }), true);
+
 console.log(`\nPASS pick-matrix (${n} tests)`);

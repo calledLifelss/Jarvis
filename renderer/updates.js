@@ -83,6 +83,13 @@
       if (btn) btn.textContent = '⬇ Installing…';
       const r2 = await window.jarvis.updates('install', { file: downloadedFile });
       toast(r2.detail || 'Installer launched.', 'ok');
+      if (r2 && r2.action === 'upgrade') {
+        // the installer is upgrading the install dir in place; main quits us
+        // so the running exe can be replaced. Say so, then stop touching DOM.
+        if (btn) { btn.disabled = true; btn.textContent = '♻ Updating — Jarvis will reopen…'; }
+        if (pill) pill.textContent = 'updating';
+        return;
+      }
       if (btn) btn.textContent = '⬇ Update';
     } catch (e) {
       toast('Update failed: ' + (e.message || e), 'err');

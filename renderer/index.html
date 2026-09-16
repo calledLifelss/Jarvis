@@ -69,6 +69,15 @@
     </button>
   </div>
 
+  <!-- Providers & Routing Manager: opens a full page over the chat area -->
+  <div class="rail-group rail-group--prov">
+    <button id="rail-prov-toggle" class="rail-row rail-row--head" aria-expanded="false" aria-controls="prov-page" title="Providers, usage and routing">
+      <svg viewBox="0 0 24 24" class="ic"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM7 6.5h.01M7 17.5h.01"/></g></svg>
+      <span class="rail-rowlabel">Providers &amp; Routing Manager</span>
+      <svg viewBox="0 0 24 24" class="ic rail-caret"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg>
+    </button>
+  </div>
+
   <div class="rail-foot">hermes :9119 · <span id="rail-conn">dialing</span></div>
 </nav>
 <!-- legacy veil/nub hooks retained for JS compat; permanently inert -->
@@ -76,6 +85,23 @@
 <button id="rail-toggle" class="gone" tabindex="-1" aria-hidden="true"></button>
 
 <main class="layout">
+  <!-- Providers & Routing Manager page: takes the whole content area -->
+  <section id="prov-page" class="prov-page hidden" aria-label="Providers and routing">
+    <header class="prov-head">
+      <div class="prov-tabs" role="tablist">
+        <button class="rpt active" data-rtab="providers" role="tab">Providers</button>
+        <button class="rpt" data-rtab="usage" role="tab">Usage</button>
+        <button class="rpt" data-rtab="combos" role="tab">Combos</button>
+      </div>
+      <button id="prov-back" class="btn ghost sm" title="Back to chat (Esc)">✕ Back to chat</button>
+    </header>
+    <div class="prov-body">
+      <div class="tab-body" id="tab-providers"></div>
+      <div class="tab-body hidden" id="tab-usage"></div>
+      <div class="tab-body hidden" id="tab-combos"></div>
+    </div>
+  </section>
+
   <section class="chat-panel">
     <!-- State strip: orb as instrument, left-aligned. Not a stage. -->
     <header class="chat-orb-layer" id="orb-layer">
@@ -140,7 +166,6 @@
       <button class="tab active" data-tab="voice">Voice</button>
       <button class="tab" data-tab="themes">Appearance</button>
       <button class="tab" data-tab="backends">Backends</button>
-      <button class="tab" data-tab="providers">Providers</button>
       <button class="tab" data-tab="skills">Skills</button>
       <button class="tab" data-tab="cron">Schedules</button>
       <button class="tab" data-tab="updates">Updates</button>
@@ -232,50 +257,6 @@
         <button id="hermes-newchat" class="btn ghost sm">＋ New chat</button>
       </div>
       <p class="hint">Live WS JSON-RPC to hermes serve. Model switch is per-chat (--session). No serve on this machine? Mock works offline.</p>
-    </div>
-    <div class="tab-body hidden" id="tab-providers">
-      <h4 data-info="Which provider each backend talks to. The model picker follows the mapping. Keys stay in ~/.hermes/keyman, the UI only sees masked values.">Backend → Provider mapping</h4>
-      <div id="prov-mapping"></div>
-      <h4>Providers <span class="prov-countpill" id="prov-count">…</span></h4>
-      <div class="row">
-        <button id="prov-refresh" class="btn ghost sm">↻ Refresh</button>
-        <button id="prov-new" class="btn ghost sm">＋ Add your own Provider</button>
-      </div>
-      <div id="prov-list" class="prov-list"></div>
-      <h4 id="prov-ed-title">Add your own Provider</h4>
-      <input id="prov-ed-id" type="hidden" />
-      <label>Name<input id="prov-ed-name" type="text" placeholder="My Provider" /></label>
-      <label>Base URL<input id="prov-ed-url" type="text" placeholder="https://api.example.com/v1" /></label>
-      <div class="prov-grid2">
-        <label>API mode
-          <select id="prov-ed-mode">
-            <option value="chat_completions">chat_completions</option>
-            <option value="anthropic_messages">anthropic_messages</option>
-            <option value="codex_responses">codex_responses</option>
-          </select>
-        </label>
-        <label>Default model<input id="prov-ed-model" type="text" placeholder="gpt-4o-mini" /></label>
-      </div>
-      <label>Models (one per line)<textarea id="prov-ed-models" rows="4" placeholder="gpt-4o-mini&#10;gpt-4o"></textarea></label>
-      <div class="prov-grid2">
-        <label>Max output tokens<input id="prov-ed-tokens" type="text" placeholder="4096" /></label>
-        <label>Context length<input id="prov-ed-ctx" type="text" placeholder="128000" /></label>
-      </div>
-      <label class="prov-check"><input id="prov-ed-discover" type="checkbox" /> Discover models automatically</label>
-      <label class="prov-check"><input id="prov-ed-enabled" type="checkbox" checked /> Enabled</label>
-      <label>API key<input id="prov-ed-key" type="password" placeholder="paste API key…" autocomplete="new-password" /></label>
-      <label>Multi-key pool (one per line, failover)<textarea id="prov-ed-multikeys" rows="2" placeholder="optional — extra keys for rotation"></textarea></label>
-      <div class="row">
-        <button id="prov-save" class="btn primary sm">Save provider</button>
-        <button id="prov-delete" class="btn ghost sm">Delete</button>
-      </div>
-      <div class="row">
-        <button id="prov-test" class="btn ghost sm">⚡ Live test</button>
-        <button id="prov-models" class="btn ghost sm">Fetch models</button>
-      </div>
-      <div id="prov-test-out" class="prov-test-out"></div>
-      <div id="prov-toast" class="prov-toast"></div>
-      <p class="hint">Keys stay in ~/.hermes/keyman, never in config.</p>
     </div>
     <div class="tab-body hidden" id="tab-skills">
       <h4>Installed skills <span class="prov-countpill" id="skills-count">…</span></h4>

@@ -2,6 +2,14 @@
 // at build time (release/channel.json); dev builds report unconfigured.
 // check -> compare -> download to tmp -> install (native package via
 // pkexec prompt, exe handed to the user). Never force-restarts.
+//
+// Three install shapes, three update paths:
+//   • AppImage / Windows portable — the app.asar swap cannot persist, so
+//     these always fall through to a full installer.
+//   • NSIS install (Windows) — app.asar sits in a normal writable dir, so a
+//     ~2MB delta can be swapped in place, or the Setup exe can upgrade the
+//     install dir silently (/S --updated).
+//   • native Linux package (deb/rpm/pkg) — pkexec into the package manager.
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
@@ -38,6 +46,12 @@ function runningAppImage(platform = process.platform, env = process.env) {
 // success and silently revert on the next start, so never pick one either.
 function runningPortable(platform = process.platform, env = process.env) {
   return platform === 'win32' && !!(env.PORTABLE_EXECUTABLE_FILE || env.PORTABLE_EXECUTABLE_DIR);
+}
+
+// Windows but NOT portable => an NSIS install (or a dev run). The install
+// dir is writable, so deltas apply and the Setup exe upgrades in place.
+function runningInstalled(platform = process.platform, env = process.env) {
+  return platform === 'win32' && !runningPortable(platform, env);
 }
 
 // true when an app.asar swap cannot persist for this install shape.
@@ -161,7 +175,13 @@ function pickAsset(assets, latestVersion, currentVersion, host = {}) {
     if (uni >= 0 && cmpVer(lat, cur) > 0) return { ...assets[uni], isPatch: true };
   }
   const plat = host.platform || process.platform;
-  if (plat === 'win32') return find('.exe') || find('.zip') || null;
+  if (plat === 'win32') {
+    // Two Windows shapes, two full-installer choices: a portable build can
+    // only be replaced by a new portable exe, an NSIS install takes the
+    // Setup exe (which upgrades the install dir in place, silently).
+    if (runningPortable(plat, host.env)) return find('win-portable.exe') || find('.exe') || find('.zip') || null;
+    return find('setup') || find('-setup.exe') || find('.exe') || find('.zip') || null;
+  }
   if (plat === 'darwin') return find('.dmg') || find('-mac', '.zip') || null;
   // linux: match the distro's native package, AppImage as fallback
   try {
@@ -258,9 +278,12 @@ function download(asset, onProgress) {
   });
 }
 
-// Install the download. Returns {action, detail}: 'relaunch' (package
-// installed, restart the app), 'replace+relaunch' (portable file, restart),
-// 'manual' (installer opened for the user).
+// Install the download. Returns {action, detail}:
+//   'relaunch'         package/patch installed, restart the app yourself
+//   'upgrade'          Windows NSIS install: silent in-place upgrade started,
+//                      the installer relaunches the app (caller should quit)
+//   'replace+relaunch' portable file, replace and restart
+//   'manual'           installer opened for the user to finish
 // Patches ({isPatch}) go through applyPatch: verify + swap app.asar in place.
 function install(filePath, opts = {}) {
   if (opts.isPatch || /-patch\.zip$/i.test(filePath)) return applyPatch(filePath);
@@ -268,8 +291,43 @@ function install(filePath, opts = {}) {
     const lower = filePath.toLowerCase();
     const plat = process.platform;
     if (plat === 'win32' || lower.endsWith('.exe')) {
-      // portable exe: launch the installer, user finishes it themselves
-      const child = spawn(`"${filePath}"`, ['/S'], { shell: true, detached: true, stdio: 'ignore' });
+      if (plat !== 'win32') {
+        // an .exe on a non-Windows host: nothing to install, just hand it over
+        resolve({ action: 'manual', detail: 'Installer downloaded to ' + filePath });
+        return;
+      }
+      if (runningPortable(plat, process.env)) {
+        // Portable build: there is no install dir to upgrade, so the user
+        // picks where the new build goes (or keeps using the portable zip).
+        const child = spawn(`"${filePath}"`, [], { shell: true, detached: true, stdio: 'ignore' });
+        child.unref();
+        resolve({ action: 'manual', detail: 'Installer launched — finish setup, then reopen Jarvis.' });
+        return;
+      }
+      // NSIS install: run the Setup exe silently (/S) with --updated so it
+      // skips the first-install pages and keeps the install dir, shortcuts
+      // and update channel. Chain the app's own relaunch so the user is not
+      // left with nothing, then step aside (the caller quits us) so the
+      // installer can replace the running exe.
+      if (!process.defaultApp) {
+        const exe = process.execPath;
+        try {
+          const child = spawn('cmd.exe',
+            ['/c', `"${filePath}" /S --updated && start "" "${exe}"`],
+            { detached: true, stdio: 'ignore', windowsHide: true });
+          child.unref();
+        } catch (e) {
+          reject(new Error('could not launch installer: ' + e.message));
+          return;
+        }
+        resolve({
+          action: 'upgrade',
+          detail: `Updating in place${opts.version ? ' to v' + opts.version : ''} — Jarvis closes and reopens when the installer finishes.`,
+        });
+        return;
+      }
+      // dev run: just show the installer
+      const child = spawn(`"${filePath}"`, [], { shell: true, detached: true, stdio: 'ignore' });
       child.unref();
       resolve({ action: 'manual', detail: 'Installer launched — finish setup, then reopen Jarvis.' });
       return;
@@ -301,9 +359,7 @@ function install(filePath, opts = {}) {
           try {
             fs.copyFileSync(filePath, self);
           } catch {
-            const { spawnSync } = require('child_process');
-            const r = spawnSync('pkexec', ['cp', filePath, self], { stdio: 'ignore' });
-            if (r.status !== 0) {
+            if (!copyElevated(filePath, self)) {
               resolve({
                 action: 'manual',
                 detail: `New AppImage is at ${filePath} — replace ${self} with it and reopen (needs root, prompt cancelled).`,
@@ -336,6 +392,37 @@ function install(filePath, opts = {}) {
 function shaFile(f) {
   // must bypass the asar wrapper: reading a real app.asar as a file needs noAsar
   return noAsar(() => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex'));
+}
+
+// single-quote a literal for PowerShell ('' escapes an embedded quote)
+function psLit(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
+
+// Copy src -> dst, asking the OS for elevation when a plain copy can't
+// write (root-owned native package on Linux, per-machine Windows install).
+// Returns true only when dst ends up byte-identical to src.
+function copyElevated(src, dst) {
+  const { spawnSync } = require('child_process');
+  if (process.platform === 'win32') {
+    // write the copy to a temp .ps1 so the quoting stays sane, then re-launch
+    // powershell elevated (UAC) and wait for it
+    const script = path.join(os.tmpdir(), 'jarvis-elev-' + Date.now() + '.ps1');
+    try {
+      fs.writeFileSync(script, `Copy-Item -LiteralPath ${psLit(src)} -Destination ${psLit(dst)} -Force\r\n`);
+      const r = spawnSync('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-Command',
+        `Start-Process -FilePath powershell.exe -Verb RunAs -Wait ` +
+        `-ArgumentList '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',${psLit(script)}`,
+      ], { stdio: 'ignore', windowsHide: true, timeout: 120000 });
+      if (r.status !== 0) return false;
+      try { return shaFile(dst) === shaFile(src); } catch { return false; }
+    } finally {
+      try { fs.unlinkSync(script); } catch {}
+    }
+  }
+  const r = spawnSync('pkexec', ['cp', src, dst], { stdio: 'ignore' });
+  if (r.status !== 0) return false;
+  try { return shaFile(dst) === shaFile(src); } catch { return false; }
 }
 
 // Minimal pure-Node zip reader. Previously this shelled out to `unzip`,
@@ -406,13 +493,11 @@ function applyPatch(zipPath) {
         try {
           fs.copyFileSync(newAsar, target);
         } catch {
-          // likely permissions (read-only AppImage mount, or a native package
-          // owned by root) — retry elevated
-          const { spawnSync } = require('child_process');
-          const r = spawnSync('pkexec', ['cp', newAsar, target], { stdio: 'ignore' });
-          if (r.status !== 0) {
+          // likely permissions — read-only AppImage mount, a root-owned native
+          // package, or a per-machine Windows install. Retry elevated.
+          if (!copyElevated(newAsar, target)) {
             fs.copyFileSync(bak, target); // roll back
-            throw new Error('needs root to patch ' + target + ' (cancelled or read-only filesystem)');
+            throw new Error('needs elevation to patch ' + target + ' (cancelled or read-only filesystem)');
           }
         }
       });
@@ -459,8 +544,14 @@ function findInstalledAsar() {
         cands.push(path.join(dir, 'resources', 'app.asar'));
       }
     } catch {}
+    // NSIS per-user install (the default: %LOCALAPPDATA%\Programs\<ProductName>)
     if (process.env.LOCALAPPDATA) {
+      cands.push(path.join(process.env.LOCALAPPDATA, 'Programs', 'Jarvis', 'resources', 'app.asar'));
       cands.push(path.join(process.env.LOCALAPPDATA, 'Jarvis', 'resources', 'app.asar'));
+    }
+    // NSIS per-machine install
+    for (const key of ['ProgramFiles', 'ProgramFiles(x86)', 'ProgramW6432']) {
+      if (process.env[key]) cands.push(path.join(process.env[key], 'Jarvis', 'resources', 'app.asar'));
     }
     if (process.env.PORTABLE_EXECUTABLE_DIR) {
       cands.push(path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'resources', 'app.asar'));
@@ -470,4 +561,16 @@ function findInstalledAsar() {
   return null;
 }
 
-module.exports = { check, pickAsset, download, install, cmpVer, noAsar };
+module.exports = {
+  check,
+  pickAsset,
+  download,
+  install,
+  cmpVer,
+  noAsar,
+  runningAppImage,
+  runningPortable,
+  runningInstalled,
+  patchCannotPersist,
+  copyElevated,
+};

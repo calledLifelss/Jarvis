@@ -679,6 +679,68 @@
     try { window.Cron && window.Cron.refresh(); } catch {}
   });
 
+  // --- Providers & Routing Manager: full page over the chat area -----------
+  (function initProvidersPage() {
+    const page = document.getElementById('prov-page');
+    const chat = document.querySelector('.chat-panel');
+    const toggle = document.getElementById('rail-prov-toggle');
+    const back = document.getElementById('prov-back');
+    if (!page || !chat || !toggle) return;
+
+    function openPageTab(name) {
+      page.querySelectorAll('.tab-body').forEach((b) => b.classList.add('hidden'));
+      const body = document.getElementById('tab-' + name);
+      if (body) body.classList.remove('hidden');
+      page.querySelectorAll('.rpt').forEach((t) =>
+        t.classList.toggle('active', t.dataset.rtab === name)
+      );
+      try {
+        if (name === 'providers' && window.Providers) window.Providers.refresh();
+        if (name === 'usage' && window.Usage) window.Usage.init();
+        if (name === 'combos' && window.Combos) window.Combos.init();
+      } catch {}
+    }
+
+    function openPage(name) {
+      chat.classList.add('hidden');
+      page.classList.remove('hidden');
+      toggle.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      openPageTab(name || 'providers');
+    }
+
+    function closePage() {
+      page.classList.add('hidden');
+      chat.classList.remove('hidden');
+      toggle.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    window.JarvisOpenProvidersRail = openPage;
+    window.JarvisCloseProvidersPage = closePage;
+
+    toggle.addEventListener('click', () => {
+      if (page.classList.contains('hidden')) openPage('providers');
+      else closePage();
+    });
+    if (back) back.addEventListener('click', closePage);
+
+    // Keyboard: Esc closes, Alt+1/2/3 jumps between sections while open.
+    const ORDER = ['providers', 'usage', 'combos'];
+    document.addEventListener('keydown', (e) => {
+      if (page.classList.contains('hidden')) return;
+      if (e.key === 'Escape') { closePage(); return; }
+      if (e.altKey && !e.ctrlKey && !e.metaKey && ORDER[Number(e.key) - 1]) {
+        e.preventDefault();
+        openPageTab(ORDER[Number(e.key) - 1]);
+      }
+    });
+
+    page.querySelectorAll('.rpt').forEach((t) =>
+      t.addEventListener('click', () => openPageTab(t.dataset.rtab))
+    );
+  })();
+
   // --- Rail: fixed work rail. Inert legacy hooks kept for compat ---------------
   function setRail() { /* fixed rail: nothing to toggle */ }
   try {
@@ -697,10 +759,11 @@
     modal.classList.remove('hidden');
     document.querySelector('.tab[data-tab="backends"]').click();
   });
-  document.querySelectorAll('.tab').forEach((tab) => {
+  // scope to the modal: the rail's Providers panels are .tab-body too
+  modal.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', async () => {
-      document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-      document.querySelectorAll('.tab-body').forEach((b) => b.classList.add('hidden'));
+      modal.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+      modal.querySelectorAll('.tab-body').forEach((b) => b.classList.add('hidden'));
       tab.classList.add('active');
       document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
       // lazy-load heavy tabs on first open (serialized: concurrent CLI
@@ -710,6 +773,7 @@
         if (tab.dataset.tab === 'cron' && window.Cron) await window.Cron.refresh();
         if (tab.dataset.tab === 'themes' && window.Packs) window.Packs.render();
         if (tab.dataset.tab === 'updates' && window.Updates) window.Updates.refresh();
+
       } catch {}
     });
   });

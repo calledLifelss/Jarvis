@@ -78,7 +78,9 @@
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Jarvis",
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Jarvis-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
     },
     "portable": {
       "artifactName": "${productName}-${version}-win-portable.${ext}"

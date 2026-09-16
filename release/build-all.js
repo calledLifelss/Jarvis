@@ -36,7 +36,13 @@ function sha256(file) {
   // 2. builds
   fs.mkdirSync(OUT, { recursive: true });
   sh('npx', ['electron-builder', '--linux', 'AppImage', 'rpm', 'deb', 'pacman', '--x64', '--publish', 'never']);
-  sh('npx', ['electron-builder', '--win', 'nsis', 'portable', '--x64', '--publish', 'never']);
+  // Windows: portable exe + a real NSIS installer (next -> next -> install).
+  // The NSIS target needs wine on non-Windows hosts; USE_SYSTEM_WINE makes
+  // electron-builder use the `wine` on PATH (flatpak shim on this box) instead
+  // of downloading its own toolset. Harmless on machines that never build win.
+  sh('npx', ['electron-builder', '--win', 'nsis', 'portable', '--x64', '--publish', 'never'], {
+    env: { ...process.env, USE_SYSTEM_WINE: process.env.USE_SYSTEM_WINE || 'true' },
+  });
 
   // 3. portable zip from the win unpacked dir (needs no extra tools)
   sh('node', ['release/make-winzip.js']);

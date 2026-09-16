@@ -143,7 +143,7 @@ app.whenReady().then(() => {
       } catch (e) { reject(e); }
     });
   }
-  const BRIDGE_OPS = new Set(['list', 'overview', 'save', 'delete', 'get_key', 'set_key', 'bulk_keys', 'multi_status', 'multi_reset', 'multi_freeze', 'check_keys', 'live_test', 'test', 'resolve', 'migrate_legacy', 'set_active', 'backups', 'backup_now', 'backup_pin', 'backup_changes', 'backup_restore', 'test_key', 'fetch_models', 'bench_log', 'claude_status', 'claude_save', 'claude_reset', 'claude_test', 'claude_provider_url']);
+  const BRIDGE_OPS = new Set(['list', 'overview', 'save', 'delete', 'get_key', 'set_key', 'bulk_keys', 'multi_status', 'multi_reset', 'multi_freeze', 'check_keys', 'live_test', 'test', 'resolve', 'migrate_legacy', 'set_active', 'backups', 'backup_now', 'backup_pin', 'backup_changes', 'backup_restore', 'test_key', 'fetch_models', 'bench_log', 'usage_router', 'live_graph', 'claude_status', 'claude_save', 'claude_reset', 'claude_test', 'claude_provider_url']);
   ipcMain.handle('providers-call', async (_ev, op, args) => {
     if (!BRIDGE_OPS.has(op)) throw new Error('bridge op not allowed: ' + op);
     return bridgeCall(op, args || {});
@@ -269,7 +269,14 @@ app.whenReady().then(() => {
       const file = a.file;
       if (!file || !fs.existsSync(file)) throw new Error('downloaded file missing — download first');
       const isPatch = !!(updCache && updCache.pick && updCache.pick.isPatch);
-      return updater.install(file, { isPatch, version: updCache && updCache.rel && updCache.rel.latest });
+      const res = await updater.install(file, { isPatch, version: updCache && updCache.rel && updCache.rel.latest });
+      // Windows NSIS install: the Setup exe is already running detached in
+      // silent/--updated mode and will relaunch us. Step aside now so it can
+      // replace the running exe instead of failing on a locked file.
+      if (res && res.action === 'upgrade') {
+        setTimeout(() => { try { app.quit(); } catch {} }, 1500);
+      }
+      return res;
     }
     throw new Error('updates op not allowed: ' + op);
   });
