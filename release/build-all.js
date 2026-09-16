@@ -35,7 +35,17 @@ function sha256(file) {
 
   // 2. builds
   fs.mkdirSync(OUT, { recursive: true });
-  sh('npx', ['electron-builder', '--linux', 'AppImage', 'rpm', 'deb', 'pacman', '--x64', '--publish', 'never']);
+  // AppImage needs no host tooling — always build it.
+  sh('npx', ['electron-builder', '--linux', 'AppImage', '--x64', '--publish', 'never']);
+  // rpm/deb/pacman need rpmbuild / fakeroot, which may be absent. Build them
+  // best-effort so missing tooling degrades the release instead of aborting it.
+  for (const t of ['rpm', 'deb', 'pacman']) {
+    try {
+      sh('npx', ['electron-builder', '--linux', t, '--x64', '--publish', 'never']);
+    } catch {
+      console.log(`· skipped linux ${t} — host tooling missing (rpmbuild/fakeroot)`);
+    }
+  }
   // Windows: portable exe + a real NSIS installer (next -> next -> install).
   // The NSIS target needs wine on non-Windows hosts; USE_SYSTEM_WINE makes
   // electron-builder use the `wine` on PATH (flatpak shim on this box) instead
@@ -47,20 +57,33 @@ function sha256(file) {
   // 3. portable zip from the win unpacked dir (needs no extra tools)
   sh('node', ['release/make-winzip.js']);
 
-  // 4. checksums for everything shippable
+  // 4. checksums for everything shippable (this release's artifacts only —
+  // release/out accumulates old versions, and SHA256SUMS-<ver>.txt is what
+  // ships).
+  const ver = require(path.join(ROOT, 'package.json')).version;
   const files = fs.readdirSync(OUT).filter((f) =>
-    /\.(AppImage|rpm|deb|pkg\.tar\.zst|exe|zip)$/.test(f),
+    f.includes(ver) && /\.(AppImage|rpm|deb|pkg\.tar\.zst|exe|zip)$/.test(f),
   ).sort();
+  const sumsName = `SHA256SUMS-${ver}.txt`;
   const lines = files.map((f) => `${sha256(path.join(OUT, f))}  ${f}`);
-  fs.writeFileSync(path.join(OUT, 'SHA256SUMS.txt'), lines.join('\n') + '\n');
-  console.log('✓ checksums for', files.length, 'artifacts');
+  fs.writeFileSync(path.join(OUT, sumsName), lines.join('\n') + '\n');
+  console.log('✓ checksums for', files.length, 'artifacts ->', sumsName);
 
-  // 5. Desktop drop folder
+  // 5. Desktop drop folder — THIS release only. Never overwrite a file that
+  // is currently running (ETXTBSY: e.g. the user's live AppImage); warn and
+  // keep going instead of aborting the whole release at the last step.
   const desk = path.join(process.env.HOME || '/tmp', 'Desktop', 'Jarvis-Installers');
   fs.mkdirSync(desk, { recursive: true });
-  for (const f of [...files, 'SHA256SUMS.txt']) {
-    fs.copyFileSync(path.join(OUT, f), path.join(desk, f));
+  let skipped = 0;
+  for (const f of [...files, sumsName]) {
+    try {
+      fs.copyFileSync(path.join(OUT, f), path.join(desk, f));
+    } catch (e) {
+      skipped++;
+      console.log(`· skipped ${f} (${e.code || e.message}) — copy it manually`);
+    }
   }
+  if (skipped) console.log(`· ${skipped} file(s) skipped`);
   fs.writeFileSync(path.join(desk, 'HOW-TO-INSTALL.txt'), installNotes());
   console.log('✓ Desktop drop:', desk);
   console.log('\n' + files.map((f) => '  • ' + f).join('\n'));
