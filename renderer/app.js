@@ -864,37 +864,6 @@
     window.setOrbState('idle', 'Idle', 'Ready.');
   });
 
-  // --- STT test (real cloud transcription of a sample) --------------------
-  document.getElementById('stt-test').addEventListener('click', async () => {
-    const key = document.getElementById('stt-key').value.trim();
-    const out = document.getElementById('stt-test-result');
-    if (!key) { out.textContent = 'Enter your transcription key first.'; return; }
-    out.textContent = 'transcribing sample…';
-    try {
-      const r = await fetch('https://api.assemblyai.com/v2/transcript', {
-        method: 'POST',
-        headers: { authorization: key, 'content-type': 'application/json' },
-        body: JSON.stringify({ audio_url: 'https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav' }),
-      });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      // poll for completion (sample is ~5min audio, usually fast)
-      let text = null;
-      for (let i = 0; i < 30; i++) {
-        await new Promise((res) => setTimeout(res, 2000));
-        const p = await fetch('https://api.assemblyai.com/v2/transcript/' + j.id, { headers: { authorization: key } });
-        const pj = await p.json();
-        if (pj.status === 'completed') { text = pj.text; break; }
-        if (pj.status === 'error') throw new Error(pj.error || 'transcription error');
-        out.textContent = `transcribing… (${pj.status})`;
-      }
-      out.textContent = text ? `✅ STT OK: "${text.slice(0, 80)}…"` : 'Timed out — key accepted, sample slow.';
-      addMsg('sys', out.textContent);
-    } catch (e) {
-      out.textContent = '❌ STT failed: ' + (e.message || e);
-    }
-  });
-
   // --- speakText ---------------------------------------------------
   function speechClean(text) {
     let t = String(text || '');
@@ -932,74 +901,6 @@
     }
     if (window.getOrbState() === 'speaking') window.setOrbState('idle', 'Idle', 'Ready.');
   };
-
-  // --- transcribeAudio ---------------------------------------------
-  window.transcribeAudio = async function (blob) {
-    const key = (document.getElementById('stt-key').value || '').trim() || localStorage.getItem('jarvis-stt-key') || '';
-    if (!key) {
-      addMsg('sys', 'No transcription key — paste it in Settings → Voice first.');
-      window.setOrbState('idle', 'Idle', 'Ready.');
-      return;
-    }
-    localStorage.setItem('jarvis-stt-key', key);
-    // guard: empty or tiny blobs always 422 — fail fast with a useful message
-    if (!blob || blob.size < 1024) {
-      addMsg('sys', `🎙️ Recording too short (${blob ? blob.size : 0} bytes) — hold the mic longer and try again.`);
-      window.setOrbState('idle', 'Idle', 'Ready.');
-      return;
-    }
-    window.setOrbState('thinking', 'Transcribing…', `Uploading ${(blob.size / 1024).toFixed(0)}KB audio…`);
-    const upBody = async (withCT) => fetch('https://api.assemblyai.com/v2/upload', {
-      method: 'POST',
-      headers: withCT
-        ? { authorization: key, 'content-type': 'application/octet-stream' }
-        : { authorization: key },
-      body: file,
-    });
-    try {
-      // 1. upload — typed File with filename; 422s are almost always wrong/missing content type
-      const mime = (blob && blob.type) || 'audio/webm';
-      const ext = /mp4|m4a|aac/.test(mime) ? 'm4a' : /ogg|opus/.test(mime) ? 'ogg' : /wav/.test(mime) ? 'wav' : /mpeg|mp3/.test(mime) ? 'mp3' : 'webm';
-      const file = new File([blob], 'jarvis-voice.' + ext, { type: mime });
-      let up = await upBody(true);
-      if (up.status === 422) up = await upBody(false); // retry bare — some builds reject the CT header
-      if (!up.ok) {
-        const body = await up.text().catch(() => '');
-        throw new Error(`upload HTTP ${up.status}${body ? ': ' + body.slice(0, 160) : ''}`);
-      }
-      const { upload_url } = await up.json();
-      // 2. transcribe
-      const tr = await fetch('https://api.assemblyai.com/v2/transcript', {
-        method: 'POST',
-        headers: { authorization: key, 'content-type': 'application/json' },
-        body: JSON.stringify({ audio_url: upload_url }),
-      });
-      if (!tr.ok) throw new Error('transcript HTTP ' + tr.status);
-      const { id } = await tr.json();
-      // 3. poll
-      let text = '';
-      for (let i = 0; i < 60; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const p = await fetch('https://api.assemblyai.com/v2/transcript/' + id, { headers: { authorization: key } });
-        const pj = await p.json();
-        if (pj.status === 'completed') { text = pj.text || ''; break; }
-        if (pj.status === 'error') throw new Error(pj.error || 'transcription error');
-        window.setOrbState('thinking', 'Transcribing…', `transcription: ${pj.status}…`);
-      }
-      const inp = document.getElementById('chat-input');
-      inp.value = text || '[empty transcript]';
-      inp.focus();
-      window.setOrbState('idle', 'Idle', 'Transcript ready — edit, then Send.');
-    } catch (e) {
-      addMsg('sys', '❌ Transcription failed: ' + (e.message || e));
-      window.setOrbState('error', 'STT error', String(e.message || e).slice(0, 80));
-      setTimeout(() => window.setOrbState('idle', 'Idle', 'Ready.'), 3000);
-    }
-  };
-  // restore saved key
-  const savedKey = localStorage.getItem('jarvis-stt-key')
-    || localStorage.getItem('jarvis-aai-key'); // legacy key name, migrated
-  if (savedKey) document.getElementById('stt-key').value = savedKey;
 
   addMsg('sys', 'Connecting to Hermes…');
   window.setOrbState('thinking', 'Connecting…', 'Dialing hermes serve :9119…');

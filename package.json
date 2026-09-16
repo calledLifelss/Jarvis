@@ -1,6 +1,6 @@
 {
   "name": "jarvis-chatroom",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "Desktop chatroom for AI agent backends",
   "author": {
     "name": "Lifeless",
@@ -19,6 +19,7 @@
     "release:patch": "node release/build-patch-only.js"
   },
   "dependencies": {
+    "sherpa-onnx-node": "^1.13.8",
     "ws": "^8.21.3"
   },
   "devDependencies": {
@@ -45,7 +46,19 @@
       "assets/**/*",
       "build/icons/**/*",
       "release/channel.json",
+      "models/**/*",
+      "node_modules/sherpa-onnx-node/**/*",
+      "node_modules/sherpa-onnx-linux-x64/**/*",
+      "node_modules/sherpa-onnx-linux-arm64/**/*",
+      "node_modules/sherpa-onnx-win-x64/**/*",
+      "node_modules/sherpa-onnx-win-ia32/**/*",
+      "node_modules/sherpa-onnx-darwin-x64/**/*",
+      "node_modules/sherpa-onnx-darwin-arm64/**/*",
       "!**/*.map"
+    ],
+    "asarUnpack": [
+      "models/**/*",
+      "node_modules/sherpa-onnx-*/**/*"
     ],
     "extraMetadata": {},
     "linux": {

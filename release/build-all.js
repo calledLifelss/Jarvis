@@ -46,6 +46,12 @@ function sha256(file) {
       console.log(`· skipped linux ${t} — host tooling missing (rpmbuild/fakeroot)`);
     }
   }
+  // Every desktop target needs its own sherpa-onnx native runtime on disk, but
+  // npm only installs the one matching the HOST (the platform packages are
+  // os/cpu gated optional deps). Cross-building the Windows package from Linux
+  // therefore ships an app whose STT require() throws. Top them up first.
+  sh('node', ['release/ensure-sherpa-runtimes.js']);
+
   // Windows: portable exe + a real NSIS installer (next -> next -> install).
   // The NSIS target needs wine on non-Windows hosts; USE_SYSTEM_WINE makes
   // electron-builder use the `wine` on PATH (flatpak shim on this box) instead

@@ -1,31 +1,30 @@
-// Theme packs: 16 full scenes. Each pack = palette (themes.css) + type
-// (pack-fonts.css) + icon voice (packs.css) + orb color story (orb.js).
-// Layers (icons/fonts/shape/orb) can each fall back to the house look via
-// data-layer-* attributes — the per-pack dropdowns in the gallery.
+// Theme packs: 16 full scenes. Each pack = palette (themes.css) + icon voice
+// (packs.css) + orb color story (orb.js) + corner radius (pack-fonts.css).
+// Type is a single face app-wide (Berlin Small Caps) — the fonts layer was removed; stored
+// data-layer-fonts state is ignored by design, not by accident.
 // Persists: jarvis-pack + jarvis-pack-layers in localStorage.
 (function () {
   const PACKS = [
-    { id: 'jarvis-dark', name: 'Jarvis Dark', vibe: 'The house console. Amber on graphite.', fonts: 'Inter + JetBrains Mono', icons: 'Lucide' },
-    { id: 'jarvis-blue', name: 'Ops Deck', vibe: 'Cold blue operations bridge.', fonts: 'Chakra Petch + Space Mono', icons: 'Tabler' },
-    { id: 'midnight', name: 'Midnight', vibe: 'Deep indigo night ops.', fonts: 'Space Grotesk + IBM Plex Mono', icons: 'Phosphor' },
-    { id: 'crimson', name: 'Red Alert', vibe: 'Engineering under klaxon light.', fonts: 'Bebas Neue + Roboto Mono', icons: 'Heroicons' },
-    { id: 'forest', name: 'Phosphor', vibe: 'Green-screen terminal, lovingly.', fonts: 'Ubuntu Mono everywhere', icons: 'Iconoir' },
-    { id: 'sand', name: 'Dune Paper', vibe: 'Warm paper console, soft corners.', fonts: 'Quicksand + Courier Prime', icons: 'Remix' },
-    { id: 'light', name: 'Daylight', vibe: 'Paper whites for bright rooms.', fonts: 'Lora serif + PT Mono', icons: 'Material Symbols' },
-    { id: 'violet', name: 'Ultraviolet', vibe: 'Lab glow, violet tubes.', fonts: 'Rajdhani + Fira Mono', icons: 'Hugeicons' },
-    { id: 'minecraft', name: 'Overworld', vibe: 'Blocky grass-and-dirt console. No rounded corners survived.', fonts: 'Silkscreen + VT323', icons: 'Pixel Art Icons' },
-    { id: 'sakura', name: 'Sakura', vibe: 'Late-night tokyo terminal, pink neon rain.', fonts: 'DotGothic + Nanum Coding', icons: 'MingCute' },
-    { id: 'ocean', name: 'Trench', vibe: 'Abyssal teal, pressure-proof.', fonts: 'Oswald + Overpass Mono', icons: 'Streamline' },
-    { id: 'ember', name: 'Forge', vibe: 'Embossed serif, forge-room heat.', fonts: 'Cinzel + Cutive Mono', icons: 'Tabler' },
-    { id: 'royal', name: 'Velvet Room', vibe: 'Gold on velvet, command with manners.', fonts: 'Cormorant + Major Mono', icons: 'Lucide' },
-    { id: 'noir', name: 'Noir Desk', vibe: 'Black, white, and a typewriter.', fonts: 'Special Elite everywhere', icons: 'Stamp blocks' },
-    { id: 'desert', name: 'Field Kit', vibe: 'Sun-bleached expedition hardware.', fonts: 'Bebas + Nova Mono', icons: 'Heroicons' },
-    { id: 'ghost', name: 'Signal Station', vibe: 'Pale daylight console, teal signal.', fonts: 'Spline Sans + Red Hat Mono', icons: 'Phosphor' },
+    { id: 'jarvis-dark', name: 'Jarvis Dark', vibe: 'The house console. Amber on graphite.', icons: 'Lucide' },
+    { id: 'jarvis-blue', name: 'Ops Deck', vibe: 'Cold blue operations bridge.', icons: 'Tabler' },
+    { id: 'midnight', name: 'Midnight', vibe: 'Deep indigo night ops.', icons: 'Phosphor' },
+    { id: 'crimson', name: 'Red Alert', vibe: 'Engineering under klaxon light.', icons: 'Heroicons' },
+    { id: 'forest', name: 'Phosphor', vibe: 'Green-screen terminal, lovingly.', icons: 'Iconoir' },
+    { id: 'sand', name: 'Dune Paper', vibe: 'Warm paper console, soft corners.', icons: 'Remix' },
+    { id: 'light', name: 'Daylight', vibe: 'Paper whites for bright rooms.', icons: 'Material Symbols' },
+    { id: 'violet', name: 'Ultraviolet', vibe: 'Lab glow, violet tubes.', icons: 'Hugeicons' },
+    { id: 'minecraft', name: 'Overworld', vibe: 'Blocky grass-and-dirt console. No rounded corners survived.', icons: 'Pixel Art Icons' },
+    { id: 'sakura', name: 'Sakura', vibe: 'Late-night tokyo terminal, pink neon rain.', icons: 'MingCute' },
+    { id: 'ocean', name: 'Trench', vibe: 'Abyssal teal, pressure-proof.', icons: 'Streamline' },
+    { id: 'ember', name: 'Forge', vibe: 'Embossed serif, forge-room heat.', icons: 'Tabler' },
+    { id: 'royal', name: 'Velvet Room', vibe: 'Gold on velvet, command with manners.', icons: 'Lucide' },
+    { id: 'noir', name: 'Noir Desk', vibe: 'Black, white, and a typewriter.', icons: 'Stamp blocks' },
+    { id: 'desert', name: 'Field Kit', vibe: 'Sun-bleached expedition hardware.', icons: 'Heroicons' },
+    { id: 'ghost', name: 'Signal Station', vibe: 'Pale daylight console, teal signal.', icons: 'Phosphor' },
   ];
 
   const LAYERS = [
     { key: 'icons', label: 'Icons', house: 'House Lucide', pack: 'Pack voice' },
-    { key: 'fonts', label: 'Fonts', house: 'House type', pack: 'Pack type' },
     { key: 'shape', label: 'Corners', house: 'House 3px', pack: 'Pack shape' },
     { key: 'orb', label: 'Orb', house: 'House amber', pack: 'Pack story' },
   ];
@@ -50,6 +49,8 @@
       if (layers[L.key] === 'house') root.dataset[attr] = 'house';
       else delete root.dataset[attr];
     }
+    // type is single-face now: never let a stale layer flag flip it
+    delete root.dataset.layerFonts;
     try { localStorage.setItem('jarvis-theme', pack); } catch {}
   }
 
@@ -129,10 +130,10 @@
         lab.appendChild(sel);
         layersEl.appendChild(lab);
       }
-      const fonts = document.createElement('div');
-      fonts.className = 'hint';
-      fonts.textContent = p.fonts + ' · ' + p.icons;
-      card.appendChild(fonts);
+      const meta = document.createElement('div');
+      meta.className = 'hint';
+      meta.textContent = 'Berlin Small Caps · ' + p.icons;
+      card.appendChild(meta);
       card.appendChild(layersEl);
       host.appendChild(card);
     }
@@ -163,6 +164,9 @@
       if (legacy && PACKS.some((p) => p.id === legacy) && !localStorage.getItem('jarvis-pack')) {
         localStorage.setItem('jarvis-pack', legacy);
       }
+      // drop the retired fonts layer so stale state can't resurface
+      const layers = getLayers();
+      if ('fonts' in layers) { delete layers.fonts; setLayers(layers); }
     } catch {}
     apply();
   }

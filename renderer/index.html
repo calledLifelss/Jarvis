@@ -172,18 +172,14 @@
     </div>
     <div class="tab-body" id="tab-voice">
       <h4>Speech → Text (ears)</h4>
-      <label>Provider
-        <select id="stt-provider">
-          <option value="cloud-stt" selected>Cloud transcription</option>
-          <option value="local" disabled>Local Whisper (later)</option>
+      <label data-info="Dictation runs on-device. The whisper-tiny model ships inside the app — no API key, no account, no download, and it works offline.">Spoken language
+        <select id="stt-lang">
+          <option value="en" selected>English</option>
+          <option value="fa">Persian — فارسی</option>
         </select>
       </label>
-      <label>Transcription API key
-        <input id="stt-key" type="password" placeholder="stored in OS keyring — never in source" />
-      </label>
       <div class="row">
-        <button id="stt-test" class="btn ghost sm">Test key</button>
-        <span id="stt-test-result" class="hint"></span>
+        <span class="hint">Hold the mic, speak, then hit ✓ — the transcript lands in the box.</span>
       </div>
       <h4>Text → Speech (voice)</h4>
       <label>Provider
@@ -345,7 +341,10 @@
 <script src="skills.js"></script>
 <script src="cron.js"></script>
 <script src="updates.js"></script>
-<script src="voice.js"></script>
 <script src="app.js"></script>
+<!-- voice.js loads after app.js: it owns the push-to-talk pill and the
+     dictation path (window.jarvis.sttTranscribe), and reads window.speakText
+     which app.js defines. -->
+<script src="voice.js"></script>
 </body>
 </html>

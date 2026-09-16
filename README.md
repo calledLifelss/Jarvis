@@ -6,8 +6,8 @@ Desktop chatroom for talking to AI agent backends. Hermes first — Mock, Claude
 
 - Reactive orb: idle / thinking / searching / coding / speaking / error / listening, with the current task in its core and a detail line below
 - Chat with streaming replies, markdown + code blocks with copy buttons, file/image attachments
-- Push-to-talk mic: recording pill with live level bars, transcription lands in the box for editing before send
-- Voice-out: free TTS, no key. Persian script is detected per sentence and switches voices mid-reply. Speed + pitch settings, speech starts while later sentences are still synthesizing (~1s warm)
+- Push-to-talk mic: recording pill with live level bars. Dictation runs on-device: a bundled whisper-tiny ONNX model (sherpa-onnx) transcribes locally, so it is free, keyless and works offline, with no python, no account and nothing to install. English and Persian are selectable in Settings → Voice; the transcript lands in the box for editing before send
+- Voice-out: free TTS, no key, no python — Edge over a plain WebSocket. Persian script is detected per sentence and switches voices mid-reply. Speed + pitch settings, speech starts while later sentences are still synthesizing (~1s warm)
 - Mini mode: minimizing docks the orb bottom-left, always on top, with a chat box
 - 16 theme packs (palette + fonts + icons + orb), including Minecraft. Each pack has layer toggles for which parts follow it
 - Providers tab: add your own API provider, test keys live, map backends to providers. Keys stay in the OS-side vault, the UI only ever sees masked values
@@ -61,7 +61,7 @@ edge_tts_native.js   Edge TTS over plain WebSocket, no python
 renderer/
   app.js             chat, backends, settings wiring
   orb.js             canvas orb
-  voice.js           mic pill, level bars
+  voice.js           mic pill, level bars, dictation
   edge-tts.js        voice-out (language detect, cleanup, knobs)
   providers.js       provider CRUD + backend mapping
   skills.js, cron.js skills hub, scheduled jobs

@@ -185,11 +185,40 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @keyframes stripsweep { from { background-position: -40% 0; } to { background-position: 140% 0; } }
 .chat-orb-layer.error .orb-sub { color: var(--danger); }
 
-.orb-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
-.chat-orb-layer #orb { width: 44px; height: 44px; display: block; }
+/* --- the orb: the app is named after it, so hot states grow it into the
+   room. Strip size is the rest state; .big takes over two-thirds of the
+   panel and the readout drops underneath. --- */
+.orb-wrap {
+  position: relative; width: 44px; height: 44px; flex-shrink: 0;
+  transition: width .38s cubic-bezier(.22,1,.36,1), height .38s cubic-bezier(.22,1,.36,1);
+}
+.chat-orb-layer #orb { width: 100%; height: 100%; display: block; }
 /* core text lives in the readout column, not painted on the orb */
 .orb-core-text { display: none; }
-.orb-meta { min-width: 0; }
+.orb-meta { min-width: 0; transition: opacity .25s; }
+
+.chat-orb-layer {
+  transition: padding .38s cubic-bezier(.22,1,.36,1), min-height .38s cubic-bezier(.22,1,.36,1);
+}
+.chat-orb-layer.big {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  min-height: 66vh;
+  padding: 18px 16px 14px;
+}
+.chat-orb-layer.big .orb-wrap {
+  width: min(58vh, 520px);
+  height: min(58vh, 520px);
+  margin: 0 auto;
+  align-self: end;
+}
+.chat-orb-layer.big .orb-meta { text-align: center; }
+.chat-orb-layer.big .orb-sub { font-size: 12.5px; color: var(--text); }
+.chat-orb-layer.big .stage-hints { justify-content: center; }
+@media (max-height: 620px) {
+  .chat-orb-layer.big { min-height: 54vh; }
+  .chat-orb-layer.big .orb-wrap { width: min(46vh, 380px); height: min(46vh, 380px); }
+}
 /* orb readout line: status readout, technical */
 .orb-sub { font: 11px var(--mono); color: var(--muted); }
 .orb-model { font: 11px var(--mono); color: var(--faint); margin-top: 2px;

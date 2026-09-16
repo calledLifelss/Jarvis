@@ -34,12 +34,20 @@
   };
   let state = 'idle';
   let angle = 0, pulse = 0, mx = 0, my = 0, ripple = 0;
-  // orb breathes by state: gray + small when idle, big + hot when working
+  // orb breathes by state: gray + small when idle, big + hot when working.
+  // The app is NAMED after this thing, so the hot states own the room.
   const SIZES = {
-    idle: 0.62, thinking: 0.8, searching: 1.0, coding: 1.0,
-    speaking: 1.08, listening: 1.12, error: 0.95,
+    idle: 0.30, thinking: 0.52, searching: 0.72, coding: 0.72,
+    speaking: 0.95, listening: 1.0, error: 0.62,
+  };
+  // how hard the shell pumps while in this state (0 = calm breathing)
+  const PUMP = {
+    idle: 0.03, thinking: 0.10, searching: 0.14, coding: 0.14,
+    speaking: 0.22, listening: 0.30, error: 0.08,
   };
   let curSize = SIZES.idle;
+  let pump = 0;          // 0..1 energy, eased toward the state's target
+  let shock = 0;         // one-shot burst fired when a hot state begins
 
   if (wrap) {
     wrap.addEventListener('pointermove', (e) => {
@@ -163,8 +171,20 @@
     angle += 0.009 * speed;
     pulse += 0.045 * speed;
     const S = W / 300;
-    curSize += ((SIZES[state] || 1) - curSize) * 0.04;
-    const R = 86 * S * curSize;
+    curSize += ((SIZES[state] || 1) - curSize) * 0.06;
+    // energy ramps fast into a hot state and drains slowly out of it
+    const want = PUMP[state] || 0.05;
+    pump += (want - pump) * (want > pump ? 0.08 : 0.025);
+    if (shock > 0) shock = Math.max(0, shock - 0.022);
+    // the beat: a slow thump with a sharp attack, doubled on listening
+    const beatRate = state === 'listening' ? 3.1 : state === 'speaking' ? 2.2 : 1.5;
+    const raw = (Math.sin(pulse * beatRate) + 1) / 2;
+    const beat = Math.pow(raw, 3.2);              // sharp attack, soft tail
+    const breathe = Math.sin(pulse * 0.42) * 0.5 + 0.5;
+    const swell = 1 + pump * (beat * 0.42 + breathe * 0.10) + shock * 0.35;
+    const R = 86 * S * curSize * swell;
+    // rings fly outward on the beat while hot
+    if (pump > 0.12 && beat > 0.93) ripple = Math.max(ripple, pump * 0.55);
     const px = mx * 8 * S, py = my * 8 * S;
     const rotY = angle * 0.9;
     const tilt = 0.38 + Math.sin(pulse * 0.3) * 0.05;
@@ -433,14 +453,20 @@
     requestAnimationFrame(draw);
   }
 
+  // states where the orb takes over the panel instead of sitting in the strip
+  const BIG_STATES = ['listening', 'speaking'];
+
   window.setOrbState = function (s, coreText, subText) {
+    const changed = s !== state;
     state = s;
+    if (changed && (BIG_STATES.includes(s) || s === 'thinking' || s === 'error')) shock = 0.85;
     // state hooks for the strip: working -> sweep bar, error -> red readout.
-    // The orb canvas itself keeps a fixed instrument size (64px in the strip).
     const layer = document.getElementById('orb-layer');
     if (layer) {
       layer.classList.toggle('working', ['thinking', 'searching', 'coding', 'speaking', 'listening'].includes(s));
       layer.classList.toggle('error', s === 'error');
+      layer.dataset.orbState = s;
+      layer.classList.toggle('big', BIG_STATES.includes(s));
     }
     if (coreEl && coreText !== undefined) {
       coreEl.setAttribute('data-text', coreText);

@@ -229,9 +229,8 @@ app.whenReady().then(() => {
     }
     return cliRun(argv, op.startsWith('skills.install') || op === 'skills.update' ? 180000 : 60000);
   });
-  // Edge TTS, native JS (no python on user machines, warm WS per voice).
+  // Edge TTS, native JS — free, keyless, no python. Ships with the app.
   const edgeTTS = require(path.join(__dirname, 'edge_tts_native.js'));
-  app.on('before-quit', () => {});
   ipcMain.handle('tts-speak', async (_ev, { text, voice, rate, pitch, volume }) => {
     const clean = String(text || '').slice(0, 2000);
     if (!clean.trim()) return { ok: false, error: 'empty' };
@@ -241,6 +240,60 @@ app.whenReady().then(() => {
     );
     if (!buf || !buf.length) throw new Error('tts produced no audio (voice may be retired)');
     return { ok: true, audio: buf.toString('base64') };
+  });
+  // ── On-device speech-to-text (sherpa-onnx + whisper-tiny) ──
+  // The ONNX model ships inside the package and the runtime is a plain Node
+  // addon, so dictation works on a fresh machine with nothing installed: no
+  // python, no API key, no model download, no network. Built lazily on the
+  // first clip so startup pays nothing.
+  const STT_DIR = app.isPackaged
+    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'models', 'sherpa-onnx-whisper-tiny')
+    : path.join(__dirname, 'models', 'sherpa-onnx-whisper-tiny');
+  const sttEngines = {};
+  function sttEngine(lang) {
+    const key = lang || 'en';
+    if (sttEngines[key]) return sttEngines[key];
+    const sherpa = require('sherpa-onnx-node');
+    const rec = new sherpa.OfflineRecognizer({
+      featConfig: { sampleRate: 16000, featureDim: 80 },
+      modelConfig: {
+        whisper: {
+          encoder: path.join(STT_DIR, 'tiny-encoder.int8.onnx'),
+          decoder: path.join(STT_DIR, 'tiny-decoder.int8.onnx'),
+          language: key,
+          task: 'transcribe',
+        },
+        tokens: path.join(STT_DIR, 'tiny-tokens.txt'),
+        numThreads: 2,
+        provider: 'cpu',
+        debug: 0,
+      },
+    });
+    sttEngines[key] = rec;
+    return rec;
+  }
+  ipcMain.handle('stt-transcribe', async (_ev, { samples, sampleRate, language }) => {
+    let audio = samples instanceof Float32Array ? samples : Float32Array.from(samples || []);
+    if (!audio.length) return { ok: false, text: '' };
+    const sr = Number(sampleRate) || 16000;
+    if (sr !== 16000) {
+      // linear resample; the model only speaks 16 kHz mono
+      const n = Math.max(1, Math.floor(audio.length * 16000 / sr));
+      const out = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = i * sr / 16000;
+        const i0 = Math.min(Math.floor(x), audio.length - 1);
+        const i1 = Math.min(i0 + 1, audio.length - 1);
+        out[i] = audio[i0] + (audio[i1] - audio[i0]) * (x - i0);
+      }
+      audio = out;
+    }
+    const rec = sttEngine(String(language || 'en').slice(0, 2));
+    const stream = rec.createStream();
+    stream.acceptWaveform({ sampleRate: 16000, samples: audio });
+    rec.decode(stream);
+    const r = rec.getResult(stream);
+    return { ok: true, text: String((r && r.text) || '').trim() };
   });
   // ── Self-update (GitHub releases) ──
   // Channel baked at build time in release/channel.json. The renderer
